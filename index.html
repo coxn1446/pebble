@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:8080 ws://localhost:3000; frame-src 'none'; object-src 'none'; base-uri 'self';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#F5F6F8" />
+    <meta name="color-scheme" content="light" />
+    <meta
+      name="description"
+      content="Pebble — collect, connect, share, and grow a network of knowledge together."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="manifest" href="/manifest.json" />
+    <title>pebble</title>
+  </head>
+  <body>
+    <div id="root">
+      <div
+        id="initial-loader"
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          font-family: Nunito, system-ui, sans-serif;
+          background: #F5F6F8;
+          color: #A8A29E;
+        "
+      >
+        Loading pebble…
+      </div>
+    </div>
+    <script type="module" src="/src/index.jsx"></script>
+  </body>
+</html>

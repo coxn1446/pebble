@@ -1,0 +1,9 @@
+{
+  "name": "pebble",
+  "short_name": "pebble",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F6F8",
+  "theme_color": "#F5F6F8",
+  "description": "Collect · Connect · Share · Grow"
+}

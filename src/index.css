@@ -1,0 +1,105 @@
+@import 'tailwindcss';
+
+/* Tokens mirror tailwind.config.js — keep both files in sync. */
+@theme {
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+
+  --color-slate: #334155;
+  --color-ocean: #2563eb;
+  --color-ocean-hover: #1d4ed8;
+  --color-pebble: #a8a29e;
+  --color-moss: #5b7c4d;
+  --color-sandstone: #d6b37a;
+
+  --color-ink: #334155;
+  --color-muted: #a8a29e;
+  --color-background: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-border: #ddd6d0;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 1.75rem;
+
+  --tracking-tagline: 0.16em;
+
+  --spacing-safe-top: env(safe-area-inset-top);
+  --spacing-safe-bottom: env(safe-area-inset-bottom);
+
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.55s ease-out both;
+  --animate-soft-pulse: soft-pulse 2.4s ease-in-out infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes soft-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.72;
+    }
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+:root {
+  --ion-background-color: var(--color-background);
+}
+
+html,
+body {
+  background-color: var(--color-background);
+}
+
+#root {
+  background-color: var(--color-background);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  background:
+    radial-gradient(900px 420px at 8% -8%, color-mix(in srgb, var(--color-sandstone) 28%, transparent) 0%, transparent 55%),
+    radial-gradient(820px 380px at 96% 0%, color-mix(in srgb, var(--color-ocean) 14%, transparent) 0%, transparent 50%),
+    radial-gradient(700px 360px at 50% 110%, color-mix(in srgb, var(--color-moss) 12%, transparent) 0%, transparent 55%),
+    var(--color-background);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
