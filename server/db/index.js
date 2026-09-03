@@ -4,7 +4,7 @@
  * - Development: local PostgreSQL via DB_HOST/DB_PORT
  * - QA/Production: Cloud SQL via unix socket
  *
- * Local auth requires a healthy database and the users table from schema.sql.
+ * Local auth requires a healthy database (schema.sql + migrations).
  */
 const { Pool } = require('pg');
 
@@ -98,6 +98,22 @@ const query = (text, params) => {
   return pool.query(text, params);
 };
 
+const withTransaction = async (fn) => {
+  if (!pool) throw new Error('Database pool not initialized');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 const closeDb = async () => {
   if (pool) {
     await pool.end().catch(() => {});
@@ -113,6 +129,7 @@ module.exports = {
   getPool,
   isDbHealthy,
   query,
+  withTransaction,
   getDbConfig: buildConfig,
   getPgPoolOptionsFromEnv,
 };

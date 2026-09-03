@@ -15,12 +15,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "jest",
+    "db:migrate": "node scripts/db-migrate.js",
     "s:prod": "CAP_APP_ENV=prod npx cap sync ios && CAP_APP_ENV=prod node scripts/sync-ios-bundle-settings.js",
     "s:qa": "CAP_APP_ENV=qa npx cap sync ios && CAP_APP_ENV=qa node scripts/sync-ios-bundle-settings.js",
     "s:dev": "CAP_APP_ENV=dev npx cap sync ios && CAP_APP_ENV=dev node scripts/sync-ios-bundle-settings.js",
     "s": "npm run s:dev",
-    "deploy:qa": "gcloud builds submit --config=cloudbuild-qa.yaml",
-    "deploy:prod": "gcloud builds submit --config=cloudbuild-prod.yaml"
+    "deploy:qa": "gcloud builds submit --config=cloudbuild-qa.yaml --project=pebble-504520",
+    "deploy:prod": "gcloud builds submit --config=cloudbuild-prod.yaml --project=pebble-504520"
   },
   "nodemonConfig": {
     "watch": [
@@ -67,6 +68,9 @@
     "react-hot-toast": "^2.5.0",
     "react-redux": "^9.0.0",
     "react-router-dom": "^7.0.0",
+    "slate": "^0.126.0",
+    "slate-history": "^0.113.1",
+    "slate-react": "^0.126.0",
     "stripe": "^18.0.0"
   },
   "devDependencies": {

@@ -4,8 +4,10 @@
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:8080 ws://localhost:3000; frame-src 'none'; object-src 'none'; base-uri 'self';"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:8080 ws://localhost:3000 https://maps.googleapis.com https://maps.gstatic.com https://places.googleapis.com https://tile.googleapis.com https://keyhole-pa.googleapis.com https://mw1.gstatic.com https://*.googleapis.com https://*.gstatic.com; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self';"
     />
+    <!-- map3d-csp-v2: hard-refresh if CSP errors still omit keyhole-pa / mw1 -->
+    <meta name="pebble-csp" content="map3d-v2" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#F5F6F8" />
     <meta name="color-scheme" content="light" />
@@ -16,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="manifest" href="/manifest.json" />
@@ -31,7 +33,7 @@
           align-items: center;
           justify-content: center;
           height: 100vh;
-          font-family: Nunito, system-ui, sans-serif;
+          font-family: Avenir, 'Avenir Next', system-ui, sans-serif;
           background: #F5F6F8;
           color: #A8A29E;
         "

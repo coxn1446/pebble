@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
-const { isDbHealthy, query } = require('../db');
-const { userQueries } = require('../queries');
+const { isDbHealthy, query, withTransaction } = require('../db');
+const { userQueries, organizationQueries } = require('../queries');
 
 const DB_REQUIRED = 'Database is unavailable. Start Postgres and apply server/db/schema.sql.';
 
@@ -37,20 +37,63 @@ const validateLocalCredentials = async (email, password) => {
   return ok ? sanitizeUser(row) : null;
 };
 
-const registerLocalUser = async ({ email, password, username, displayName }) => {
+const registerLocalUser = async ({
+  email,
+  password,
+  username,
+  displayName,
+  accountType = 'personal',
+  organizationName,
+}) => {
   requireDb();
   if (!email || !password) {
     const err = new Error('Email and password are required');
     err.status = 400;
     throw err;
   }
+
+  const type = accountType === 'organization' ? 'organization' : 'personal';
+  if (type === 'organization' && !organizationName && !displayName && !username) {
+    const err = new Error('Organization name is required for organization accounts');
+    err.status = 400;
+    throw err;
+  }
+
   try {
     const hash = await bcrypt.hash(password, 12);
+    const name = displayName || username || email;
+
+    if (type === 'organization') {
+      return await withTransaction(async (client) => {
+        const orgResult = await client.query(organizationQueries.insert, [
+          organizationName || name,
+          null,
+          null,
+          null,
+          null,
+        ]);
+        const org = orgResult.rows[0];
+        const userResult = await client.query(userQueries.insertLocalUser, [
+          email,
+          username || null,
+          hash,
+          name,
+          'organization',
+        ]);
+        const linked = await client.query(userQueries.linkOrganization, [
+          userResult.rows[0].user_id,
+          org.organization_id,
+        ]);
+        return sanitizeUser(linked.rows[0]);
+      });
+    }
+
     const { rows } = await query(userQueries.insertLocalUser, [
       email,
       username || null,
       hash,
-      displayName || username || email,
+      name,
+      'personal',
     ]);
     return sanitizeUser(rows[0]);
   } catch (err) {

@@ -1,5 +1,16 @@
 const { Router } = require('express');
 const authRoutes = require('./auth');
+const usersRoutes = require('./users');
+const organizationsRoutes = require('./organizations');
+const placesRoutes = require('./places');
+const uploadsRoutes = require('./uploads');
+const taxonomyRoutes = require('./taxonomy');
+const pebblesRoutes = require('./pebbles');
+const collectionsRoutes = require('./collections');
+const socialRoutes = require('./social');
+const flagsRoutes = require('./flags');
+const notificationsRoutes = require('./notifications');
+const searchRoutes = require('./search');
 const { isDbHealthy } = require('../db');
 
 module.exports = () => {
@@ -17,6 +28,7 @@ module.exports = () => {
         DB_PASSWORD: Boolean(process.env.DB_PASSWORD),
         DB_DATABASE: Boolean(process.env.DB_DATABASE),
         GOOGLE_CLIENT_ID: Boolean(process.env.GOOGLE_CLIENT_ID),
+        GOOGLE_PLACES_API_KEY: Boolean(process.env.GOOGLE_PLACES_API_KEY),
         STRIPE_SECRET_KEY: Boolean(process.env.STRIPE_SECRET_KEY),
       },
     };
@@ -27,6 +39,17 @@ module.exports = () => {
   });
 
   router.use('/auth', authRoutes());
+  router.use('/users', usersRoutes());
+  router.use('/organizations', organizationsRoutes());
+  router.use('/places', placesRoutes());
+  router.use('/uploads', uploadsRoutes());
+  router.use('/taxonomy', taxonomyRoutes());
+  router.use('/pebbles', pebblesRoutes());
+  router.use('/collections', collectionsRoutes());
+  router.use('/social', socialRoutes());
+  router.use('/flags', flagsRoutes());
+  router.use('/notifications', notificationsRoutes());
+  router.use('/search', searchRoutes());
 
   return router;
 };

@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
@@ -23,9 +24,15 @@ module.exports = async ({ app }) => {
   app.use(compression());
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-  // Multer available for future upload routes (stub wiring).
-  app.set('upload', multer({ storage: multer.memoryStorage() }));
+  app.set(
+    'upload',
+    multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 25 * 1024 * 1024 },
+    })
+  );
 
   app.use(
     rateLimit({

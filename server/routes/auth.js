@@ -42,6 +42,8 @@ module.exports = () => {
         password: req.body?.password,
         username: req.body?.username,
         displayName: req.body?.displayName,
+        accountType: req.body?.accountType,
+        organizationName: req.body?.organizationName,
       });
       return req.login(user, (err) => {
         if (err) return next(err);

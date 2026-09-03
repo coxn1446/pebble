@@ -6,6 +6,8 @@ const SIZE_CLASS = {
   sm: 'h-8 w-8',
   md: 'h-11 w-11',
   lg: 'h-20 w-20',
+  hero: 'h-24 w-24 md:h-28 md:w-28',
+  xl: 'h-40 w-40 md:h-56 md:w-56',
 };
 
 export const BRAND_TAGLINE = 'Collect · Connect · Share · Grow';

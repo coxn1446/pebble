@@ -27,12 +27,26 @@ export const loginWithPassword = async (email, password) => {
   return data.user;
 };
 
-export const registerWithPassword = async ({ email, password, username, displayName }) => {
+export const registerWithPassword = async ({
+  email,
+  password,
+  username,
+  displayName,
+  accountType,
+  organizationName,
+}) => {
   const res = await fetch('/api/auth/register', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, username, displayName }),
+    body: JSON.stringify({
+      email,
+      password,
+      username,
+      displayName,
+      accountType,
+      organizationName,
+    }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

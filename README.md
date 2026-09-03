@@ -14,15 +14,16 @@ psql -d pebble -f server/db/schema.sql
 # 2. Env
 cp .env.example .env
 
-# 3. Install & run
+# 3. Install, migrate, run
 npm install
+npm run db:migrate
 npm run dev
 ```
 
 - Client: http://localhost:3000  
 - API: http://localhost:8080 (`/api` proxied from Vite)
 
-Register at `/register`, then sign in at `/login`.
+Sign in at `/login`. Public signup is off; `/register` stays available for creating accounts by hand.
 
 ## Scripts
 
@@ -30,6 +31,7 @@ Register at `/register`, then sign in at `/login`.
 |--------|---------|
 | `npm run dev` | Express + Vite concurrently |
 | `npm run build` | Production client build → `build/` |
+| `npm run db:migrate` | Apply pending `server/db/migrations/*.sql` |
 | `npm test` | Jest |
 | `npm run s` / `s:dev` / `s:qa` / `s:prod` | Capacitor iOS sync + bundle id |
 | `npm run deploy:qa` / `deploy:prod` | Cloud Build → Cloud Run |
@@ -46,6 +48,8 @@ Open `ios/App` in Xcode. Bundle IDs: `io.pebble.app.dev`, `io.pebble.qa`, `io.pe
 
 ## Docs
 
+- `AGENTS.md` — agent constitution (rules and skills in `.cursor/`)
+- `documentation/REQUEST_PROMPT.md` — short overlay and request recipe
 - `documentation/ARCHITECTURE.md`
 - `documentation/DATABASE_SCHEMA.md`
 - `documentation/DEPLOYMENT.md`

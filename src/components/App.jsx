@@ -4,12 +4,21 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import { setUser, clearUser, selectIsAuthenticated, selectAuthLoading } from '../store/auth.reducer';
 import { fetchCurrentUser } from '../helpers/authHelpers';
-import Nav from './Nav/Nav';
+import ContentArea from './Layout/ContentArea';
 import Loading from './Loading/Loading';
 
 const Home = lazy(() => import('../routes/Home'));
 const Login = lazy(() => import('../routes/Login'));
 const Register = lazy(() => import('../routes/Register'));
+const Map = lazy(() => import('../routes/Map'));
+const PebbleNew = lazy(() => import('../routes/PebbleNew'));
+const PebbleDetail = lazy(() => import('../routes/PebbleDetail'));
+const PebbleEdit = lazy(() => import('../routes/PebbleEdit'));
+const Collections = lazy(() => import('../routes/Collections'));
+const CollectionDetail = lazy(() => import('../routes/CollectionDetail'));
+const Profile = lazy(() => import('../routes/Profile'));
+const Settings = lazy(() => import('../routes/Settings'));
+const Notifications = lazy(() => import('../routes/Notifications'));
 
 const GuestOnlyRoute = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -17,6 +26,15 @@ const GuestOnlyRoute = ({ children }) => {
 
   if (isLoading) return <Loading />;
   if (isAuthenticated) return <Navigate to="/" replace />;
+  return children;
+};
+
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isLoading = useSelector(selectAuthLoading);
+
+  if (isLoading) return <Loading />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 };
 
@@ -36,7 +54,7 @@ const App = () => {
   }, [dispatch]);
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -47,8 +65,7 @@ const App = () => {
           },
         }}
       />
-      <Nav />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
+      <ContentArea>
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -68,11 +85,70 @@ const App = () => {
                 </GuestOnlyRoute>
               }
             />
+            <Route path="/map" element={<Navigate to="/" replace />} />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pebbles/new"
+              element={
+                <ProtectedRoute>
+                  <PebbleNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pebbles/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <PebbleEdit />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/pebbles/:id" element={<PebbleDetail />} />
+            <Route
+              path="/collections"
+              element={
+                <ProtectedRoute>
+                  <Collections />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/collections/:id"
+              element={
+                <ProtectedRoute>
+                  <CollectionDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/u/:username" element={<Profile />} />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </main>
-    </div>
+      </ContentArea>
+    </>
   );
 };
 

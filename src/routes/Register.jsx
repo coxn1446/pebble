@@ -13,10 +13,10 @@ const Register = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async ({ email, password, username }) => {
+  const handleSubmit = async (payload) => {
     setIsSubmitting(true);
     try {
-      const user = await registerWithPassword({ email, password, username });
+      const user = await registerWithPassword(payload);
       dispatch(setUser(user));
       navigate('/');
     } catch (err) {

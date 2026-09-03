@@ -29,9 +29,12 @@ describe('pebble brand tokens', () => {
     expect(colors.background).toBe('#F5F6F8');
   });
 
-  test('uses a rounded brand font stack', () => {
-    expect(tailwindConfig.theme.extend.fontFamily.sans[0]).toBe('Nunito');
-    expect(tailwindConfig.theme.extend.fontFamily.display[0]).toBe('Nunito');
+  test('uses Avenir for body and Fraunces for display headings', () => {
+    expect(tailwindConfig.theme.extend.fontFamily.sans[0]).toBe('Avenir');
+    expect(tailwindConfig.theme.extend.fontFamily.display[0]).toBe('Fraunces');
+    expect(indexCss).toMatch(/--font-sans:\s*'Avenir'/);
+    expect(indexCss).toMatch(/--font-display:\s*'Fraunces'/);
+    expect(indexCss).toMatch(/h1,\s*\n?h2,\s*\n?h3,/);
   });
 
   test('includes brand motion tokens', () => {
@@ -71,7 +74,8 @@ describe('chrome colors stay on brand tokens', () => {
     expect(capacitorConfig).toContain(`backgroundColor: '${colors.background}'`);
   });
 
-  test('index.html loads the Nunito brand font', () => {
-    expect(indexHtml).toMatch(/fonts\.googleapis\.com\/css2\?family=Nunito/);
+  test('index.html loads Fraunces and uses the Avenir body stack on the initial loader', () => {
+    expect(indexHtml).toMatch(/font-family:\s*Avenir/);
+    expect(indexHtml).toMatch(/fonts\.googleapis\.com\/css2\?family=Fraunces/);
   });
 });

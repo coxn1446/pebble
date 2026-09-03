@@ -5,8 +5,8 @@
 
 require('dotenv').config();
 
-const DEFAULT_PROD_URL = 'https://pebble-prod-placeholder.run.app';
-const DEFAULT_QA_URL = 'https://pebble-qa-placeholder.run.app';
+const DEFAULT_PROD_URL = 'https://pebble-prod-399201808588.us-central1.run.app';
+const DEFAULT_QA_URL = 'https://pebble-qa-399201808588.us-central1.run.app';
 const DEFAULT_DEV_URL = 'http://localhost:3000';
 
 function normalizeCapAppEnv(raw) {

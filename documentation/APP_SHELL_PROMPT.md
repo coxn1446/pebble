@@ -2,6 +2,8 @@
 
 Use this prompt when creating a new app shell based on the following architecture. This prompt captures the complete structure, tech stack, and patterns used in this codebase.
 
+Day-to-day agent work uses `AGENTS.md`, `.cursor/rules/`, and `.cursor/skills/` — not this file. Pin package versions to this repo’s `package.json`. Do not write “latest.”
+
 ## Context
 
 I need you to create a new app shell (no functionality, just structure) based on the architecture below. The new app should have the same internal structure, tech stack, and organizational patterns, but be ready for new features to be built on top of it.
@@ -286,7 +288,7 @@ When making ANY database change:
    - New indexes
    - New triggers/functions
    - Migration notes
-3. Never use migrations, preference will always be to run code manually
+3. Prefer numbered SQL migrations in `server/db/migrations/` (`NNN_description.sql`) plus keeping `server/db/schema.sql` current; apply with `npm run db:migrate`
 
 ### 2. Testing
 When adding new features:
