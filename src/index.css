@@ -159,8 +159,10 @@ h6 {
 /* Organic pebble blobs for the guest welcome audience section */
 .welcome-blob {
   display: flex;
-  width: 11rem;
-  height: 11rem;
+  width: 100%;
+  max-width: 20rem;
+  aspect-ratio: 1 / 1;
+  height: auto;
   align-items: center;
   justify-content: center;
   margin-inline: auto;
@@ -169,6 +171,50 @@ h6 {
 
 .group:hover .welcome-blob {
   transform: scale(1.05);
+}
+
+.welcome-timeline-pebble {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: var(--color-ink);
+  border-radius: 53% 47% 43% 57% / 46% 41% 59% 54%;
+}
+
+.welcome-timeline-line {
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  background-color: var(--color-border);
+  transform: translateX(-50%);
+}
+
+.welcome-timeline-line-up {
+  top: 0;
+  height: 50%;
+}
+
+.welcome-timeline-line-down {
+  bottom: 0;
+  height: 50%;
+}
+
+.welcome-check-pebble {
+  background-color: color-mix(in srgb, var(--color-sandstone) 45%, white);
+  border-radius: 53% 47% 43% 57% / 46% 41% 59% 54%;
+}
+
+.welcome-different-mark {
+  position: relative;
+  font-style: italic;
+}
+
+.welcome-different-mark::before {
+  content: '';
+  position: absolute;
+  inset: -0.2em -0.35em;
+  z-index: -1;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--color-ocean) 12%, transparent);
 }
 
 .welcome-blob-educators {
@@ -195,21 +241,7 @@ h6 {
   color: var(--color-ink);
 }
 
-/* Crop the how-it-works triptych so each column shows one panel */
-.welcome-how-art {
-  overflow: hidden;
-  height: 10rem;
-}
-
-.welcome-how-art img {
-  display: block;
-  width: 300%;
-  max-width: none;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Soft network backdrop for methodology mockup */
+/* Soft network backdrop kept for unused mockup art */
 .welcome-network {
   background-color: color-mix(in srgb, var(--color-ocean) 10%, white);
   background-image:

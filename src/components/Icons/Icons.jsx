@@ -240,6 +240,37 @@ export const UsersIcon = ({ className = 'h-4 w-4' }) => (
   </svg>
 );
 
+export const PeopleIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <circle cx="9" cy="8" r="2.8" />
+    <circle cx="16" cy="8.5" r="2.4" />
+    <path d="M4 20a5 5 0 0 1 10 0" />
+    <path d="M13.5 20a4.5 4.5 0 0 1 7-3.2" />
+  </svg>
+);
+
+export const EyeIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="2.5" />
+  </svg>
+);
+
+export const EyeOffIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M3 5.5 21 19.5" />
+    <path d="M9.5 8.2A6 6 0 0 1 12 7.5c6 0 9.5 4.5 9.5 4.5a13 13 0 0 1-3.2 3.2" />
+    <path d="M6.6 10.2A13 13 0 0 0 2.5 12S6 18.5 12 18.5a8 8 0 0 0 3.3-.7" />
+    <path d="M10.2 13.8a2.5 2.5 0 0 0 3.6-3.4" />
+  </svg>
+);
+
+export const CheckIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </svg>
+);
+
 export const BoardIcon = ({ className = 'h-4 w-4' }) => (
   <svg {...baseProps} className={className}>
     <rect x="3.5" y="3.5" width="17" height="12" rx="1.5" />

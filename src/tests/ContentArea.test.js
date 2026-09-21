@@ -56,6 +56,38 @@ describe('ContentArea', () => {
     expect(screen.getByTestId('content-pane')).toHaveClass('overflow-hidden');
   });
 
+  test('uses edge-to-edge main for guest marketing routes', () => {
+    ['/how-it-works', '/about-us', '/login', '/register'].forEach((path) => {
+      const { unmount } = renderContentArea(
+        {
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        },
+        [path]
+      );
+
+      const main = screen.getByText('Page content').closest('main');
+      expect(main).toHaveClass('h-full', 'w-full', 'min-w-0');
+      expect(screen.getByTestId('content-pane')).toHaveAttribute('data-layout', 'full');
+      unmount();
+    });
+  });
+
+  test('hides sidebar on marketing routes for authenticated users', () => {
+    renderContentArea(
+      {
+        user: createMockUser(),
+        isAuthenticated: true,
+        isLoading: false,
+      },
+      ['/about-us']
+    );
+
+    expect(screen.queryByRole('link', { name: 'Map' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('content-pane')).toHaveAttribute('data-layout', 'full');
+  });
+
   test('shows sidebar without Feed link for authenticated users', () => {
     renderContentArea({
       user: createMockUser(),

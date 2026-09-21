@@ -69,9 +69,12 @@ describe('Home', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Who is pebble for?' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /building the nest/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'How it Works' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Explore Pebbles' })).toHaveAttribute('href', '/login');
-    expect(screen.getByRole('heading', { name: 'About Us' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'How it Works' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'How it Works' })).toHaveAttribute(
+      'href',
+      '/how-it-works'
+    );
+    expect(screen.getByRole('link', { name: 'About Us' })).toHaveAttribute('href', '/about-us');
     expect(screen.getByTestId('welcome-scroll')).toHaveClass('snap-y');
   });
 
@@ -79,7 +82,9 @@ describe('Home', () => {
     renderHome();
 
     expect(screen.getByRole('link', { name: /get started/i })).toHaveAttribute('href', '/login');
-    expect(screen.getByRole('link', { name: 'Log In' })).toHaveAttribute('href', '/login');
+    const signInLinks = screen.getAllByRole('link', { name: /sign in/i });
+    expect(signInLinks.length).toBeGreaterThanOrEqual(1);
+    signInLinks.forEach((link) => expect(link).toHaveAttribute('href', '/login'));
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
     expect(hrefs).not.toContain('/register');
   });

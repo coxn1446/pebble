@@ -5,13 +5,20 @@ import { selectAuthLoading, selectIsAuthenticated } from '../../store/auth.reduc
 import Nav from '../Nav/Nav';
 import Loading from '../Loading/Loading';
 
+const MARKETING_PATHS = ['/how-it-works', '/about-us'];
+
+const isMarketingPath = (pathname) => MARKETING_PATHS.includes(pathname);
+
 const isFullWidthPath = (pathname) => {
   if (
     pathname === '/' ||
     pathname === '/map' ||
+    pathname === '/login' ||
+    pathname === '/register' ||
     pathname === '/notifications' ||
     pathname === '/profile' ||
-    pathname === '/settings'
+    pathname === '/settings' ||
+    isMarketingPath(pathname)
   ) {
     return true;
   }
@@ -23,6 +30,7 @@ const isFullWidthPath = (pathname) => {
 /**
  * App shell: sticky left nav (auth only) + independently scrolling content.
  * Map, notifications, profile, settings, and pebble detail use a full-bleed pane.
+ * Guest marketing and login are full-bleed without the app sidebar.
  */
 const ContentArea = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -30,7 +38,12 @@ const ContentArea = ({ children }) => {
   const { pathname } = useLocation();
   const isFullWidth = isFullWidthPath(pathname);
   const isMapRoute = pathname === '/' || pathname === '/map';
-  const isGuestWelcome = isMapRoute && !isAuthenticated;
+  const isMarketingRoute = isMarketingPath(pathname);
+  const isGuestHome = isMapRoute && !isAuthenticated;
+  const isGuestAuth =
+    !isAuthenticated && (pathname === '/login' || pathname === '/register');
+  const isMarketingShell = isGuestHome || isMarketingRoute;
+  const showNav = isAuthenticated && !isMarketingRoute;
 
   if (isLoading) {
     return (
@@ -42,14 +55,14 @@ const ContentArea = ({ children }) => {
 
   return (
     <div className="flex h-dvh overflow-hidden">
-      {isAuthenticated ? <Nav /> : null}
+      {showNav ? <Nav /> : null}
       <div
         data-testid="content-pane"
         data-layout={isFullWidth ? 'full' : 'readable'}
         className={
           isMapRoute && isAuthenticated
             ? 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
-            : isGuestWelcome
+            : isMarketingShell || isGuestAuth
               ? 'min-h-0 min-w-0 flex-1 overflow-hidden'
               : 'min-h-0 min-w-0 flex-1 overflow-y-auto'
         }
@@ -58,7 +71,7 @@ const ContentArea = ({ children }) => {
           className={
             isMapRoute && isAuthenticated
               ? 'flex h-full min-h-0 w-full min-w-0 flex-1 flex-col px-4 py-4 md:px-6 md:py-5'
-              : isGuestWelcome
+              : isMarketingShell || isGuestAuth
                 ? 'flex h-full min-h-0 w-full min-w-0 flex-col'
                 : isFullWidth
                   ? 'w-full min-w-0 px-4 py-6 md:px-6 md:py-8'

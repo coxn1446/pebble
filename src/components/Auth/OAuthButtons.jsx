@@ -1,6 +1,6 @@
 import React from 'react';
 
-const OAuthButtons = () => (
+const OAuthButtons = ({ showHint = true }) => (
   <div className="space-y-2">
     <a
       href="/api/auth/google"
@@ -14,9 +14,11 @@ const OAuthButtons = () => (
     >
       Continue with Apple
     </a>
-    <p className="pt-1 text-xs text-muted">
-      Google and Apple return “not configured” until OAuth credentials are added.
-    </p>
+    {showHint ? (
+      <p className="pt-1 text-xs text-muted">
+        Google and Apple return “not configured” until OAuth credentials are added.
+      </p>
+    ) : null}
   </div>
 );
 

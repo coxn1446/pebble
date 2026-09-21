@@ -41,7 +41,7 @@ const BrandMark = ({
         <span className="inline-flex items-center gap-3">
           {mark}
           {showWordmark ? (
-            <span className="font-display text-2xl font-bold lowercase tracking-tight text-ink">
+            <span className="font-display text-2xl font-medium lowercase tracking-tight text-ink">
               pebble
             </span>
           ) : null}
@@ -50,7 +50,7 @@ const BrandMark = ({
         <>
           {mark}
           {showWordmark ? (
-            <span className="font-display text-xl font-bold lowercase tracking-tight text-ink">
+            <span className="font-display text-xl font-medium lowercase tracking-tight text-ink">
               pebble
             </span>
           ) : null}

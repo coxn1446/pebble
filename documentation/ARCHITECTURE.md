@@ -1,7 +1,7 @@
 # Pebble Architecture
 
 ## Last Updated
-2026-09-02 (unlisted register; QA/prod Cloud Run)
+2026-09-09 (guest marketing polish; about-us snap layout)
 
 Keep this file as **current state**. Prefer a short dated note here, not a running changelog novel. Agent constitution: `AGENTS.md`. UI tokens: `tailwind.config.js`. Shared skills live in `.cursor/skills/` (synced from App Shell `cursor-templates`).
 
@@ -29,9 +29,11 @@ Components → helpers → routes → services → queries
 
 ## App routes (SPA)
 
-- `/` — marketing welcome for guests (continuous scroll: hero → audience → methodology → how it works → explore pebbles → about us); map + viewport feed for authenticated users (desktop always split)
-- `/login` — guest-only sign-in (welcome and login have no public signup links)
-- `/register` — guest-only account creation, kept unlisted so accounts can be created by hand
+- `/` — marketing home for guests (snap scroll: hero → audience → methodology); map + viewport feed for authenticated users (desktop always split)
+- `/how-it-works` — How it Works + Explore Pebbles (marketing; no app sidebar)
+- `/about-us` — About Us letter + first four field-journey photos, then How we're different + remaining four photos (snap scroll like home / how it works; no app sidebar)
+- `/login` — guest-only sign-in (welcome and login have no public signup links); marketing footer
+- `/register` — guest-only account creation, kept unlisted so accounts can be created by hand; marketing footer
 - `/map` — redirects to `/`
 - `/notifications` — in-app notification inbox (auth)
 - `/profile` — current user profile (settings + collections + new pebble entry points)
@@ -42,7 +44,7 @@ Components → helpers → routes → services → queries
 
 Standalone `Feed` route component remains in the codebase for potential mobile reuse but is not mounted on desktop.
 
-Layout: `ContentArea` — sticky left sidebar (authenticated only) + independently scrolling main content. Full-width pane for map, guest welcome, guest login/register, notifications, profile, settings, and pebble detail.
+Layout: `ContentArea` — sticky left sidebar (authenticated only, hidden on `/how-it-works` and `/about-us`) + independently scrolling main content. Full-width pane for map, guest home, how it works, about us, guest login/register, notifications, profile, settings, and pebble detail. Unauthenticated marketing and auth screens include the shared Welcome footer.
 
 Sidebar nav (authenticated): Map, Notifications, Profile, Sign out. Icons in `src/components/Icons/Icons.jsx`.
 

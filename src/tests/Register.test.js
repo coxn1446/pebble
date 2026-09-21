@@ -30,5 +30,6 @@ describe('Register', () => {
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 });

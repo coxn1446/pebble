@@ -85,4 +85,31 @@ describe('App auth routes', () => {
       expect(screen.getByRole('heading', { name: /Sign in/i })).toBeInTheDocument()
     );
   });
+
+  test('serves how it works and about us marketing routes for guests', async () => {
+    global.fetch = jest.fn(createAuthFetchMock(false));
+
+    const { unmount } = renderApp(['/how-it-works'], {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'How it Works' })).toBeInTheDocument()
+    );
+    expect(screen.getByRole('link', { name: 'Explore Pebbles' })).toHaveAttribute('href', '/login');
+    unmount();
+
+    renderApp(['/about-us'], {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'About Us' })).toBeInTheDocument()
+    );
+    expect(screen.getByRole('heading', { name: /how we're different/i })).toBeInTheDocument();
+  });
 });

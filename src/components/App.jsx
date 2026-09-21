@@ -8,6 +8,8 @@ import ContentArea from './Layout/ContentArea';
 import Loading from './Loading/Loading';
 
 const Home = lazy(() => import('../routes/Home'));
+const HowItWorks = lazy(() => import('../routes/HowItWorks'));
+const AboutUs = lazy(() => import('../routes/AboutUs'));
 const Login = lazy(() => import('../routes/Login'));
 const Register = lazy(() => import('../routes/Register'));
 const Map = lazy(() => import('../routes/Map'));
@@ -69,6 +71,8 @@ const App = () => {
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/about-us" element={<AboutUs />} />
             <Route
               path="/login"
               element={
