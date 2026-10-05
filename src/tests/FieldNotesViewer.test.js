@@ -16,6 +16,26 @@ describe('FieldNotesViewer', () => {
     expect(screen.getByText('Body note')).toBeInTheDocument();
   });
 
+  test('renders bulleted and numbered lists', () => {
+    render(
+      <FieldNotesViewer
+        value={[
+          {
+            type: 'bulleted-list',
+            children: [{ type: 'list-item', children: [{ text: 'First finding' }] }],
+          },
+          {
+            type: 'numbered-list',
+            children: [{ type: 'list-item', children: [{ text: 'Second finding' }] }],
+          },
+        ]}
+      />
+    );
+    expect(screen.getAllByRole('list')).toHaveLength(2);
+    expect(screen.getByText('First finding')).toBeInTheDocument();
+    expect(screen.getByText('Second finding')).toBeInTheDocument();
+  });
+
   test('renders media resource links', () => {
     render(
       <FieldNotesViewer
@@ -32,6 +52,18 @@ describe('FieldNotesViewer', () => {
     expect(screen.getByRole('link', { name: 'Dataset' })).toHaveAttribute(
       'href',
       '/uploads/data.json'
+    );
+  });
+
+  test('makes urls inside notes clickable', () => {
+    render(
+      <FieldNotesViewer
+        value={[{ type: 'paragraph', children: [{ text: 'See https://example.edu/paper today' }] }]}
+      />
+    );
+    expect(screen.getByRole('link', { name: 'https://example.edu/paper' })).toHaveAttribute(
+      'href',
+      'https://example.edu/paper'
     );
   });
 });

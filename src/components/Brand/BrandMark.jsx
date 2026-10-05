@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import logoSrc from '../../resources/pebble-logo.png';
+import logoOutlineSrc from '../../resources/pebble-logo-outline.png';
 
 const SIZE_CLASS = {
   sm: 'h-8 w-8',
   md: 'h-11 w-11',
   lg: 'h-20 w-20',
-  hero: 'h-24 w-24 md:h-28 md:w-28',
+  hero: 'h-20 w-24 object-contain md:h-32 md:w-36 lg:h-36 lg:w-44',
   xl: 'h-40 w-40 md:h-56 md:w-56',
 };
 
@@ -21,15 +22,16 @@ const BrandMark = ({
   showTagline = false,
   to = '/',
   animated = false,
+  outline = false,
   className = '',
 }) => {
   const mark = (
     <img
-      src={logoSrc}
+      src={outline ? logoOutlineSrc : logoSrc}
       alt={showWordmark ? '' : 'Pebble'}
-      className={`${SIZE_CLASS[size] || SIZE_CLASS.sm} shrink-0 rounded-full ${
-        animated ? 'animate-float' : ''
-      }`}
+      className={`${SIZE_CLASS[size] || SIZE_CLASS.sm} shrink-0 ${
+        size === 'hero' ? '' : 'rounded-full'
+      } ${animated ? 'animate-float' : ''} ${outline ? 'logo-outline' : ''}`}
     />
   );
 
@@ -69,7 +71,7 @@ const BrandMark = ({
   }
 
   return (
-    <Link to={to} className="w-fit transition hover:opacity-90" aria-label="Pebble home">
+    <Link to={to} className="flex w-fit items-center transition hover:opacity-90" aria-label="Pebble home">
       {content}
     </Link>
   );

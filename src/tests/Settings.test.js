@@ -76,4 +76,35 @@ describe('Settings', () => {
     expect(updateNotificationPreferences).toHaveBeenCalled();
     expect(screen.getByText('Notifications')).toBeInTheDocument();
   });
+
+  test('saves a profile blurb', async () => {
+    const store = configureStore({
+      reducer: { auth: authReducer },
+      preloadedState: {
+        auth: { user: createMockUser(), isAuthenticated: true, isLoading: false },
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter>
+          <Settings />
+        </MemoryRouter>
+      </Provider>
+    );
+
+    const blurb = await screen.findByLabelText('Blurb');
+    fireEvent.change(blurb, {
+      target: { value: 'I watch ice shelves. The coast tells the story. Notes stay short.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+    await waitFor(() =>
+      expect(updateMe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          blurb: 'I watch ice shelves. The coast tells the story. Notes stay short.',
+        })
+      )
+    );
+  });
 });

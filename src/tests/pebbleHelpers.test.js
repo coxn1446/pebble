@@ -2,7 +2,10 @@ import {
   createPebble,
   fetchFeed,
   fetchMapPebbles,
+  formatObserved,
   likePebble,
+  pinLabel,
+  publishedMapPath,
   searchPebbles,
   unlikePebble,
 } from '../helpers/pebbleHelpers';
@@ -70,11 +73,42 @@ describe('pebbleHelpers', () => {
       { credentials: 'include' }
     );
 
-    await searchPebbles({ q: 'gravity', fieldId: 2, author: 'ada', region: 'Maine' });
+    await searchPebbles({
+      q: 'gravity',
+      fieldId: 2,
+      author: 'ada',
+      region: 'Maine',
+      favorites: true,
+      mine: true,
+      hasPhoto: true,
+      hasVideo: true,
+      hasData: true,
+    });
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/pebbles/search?q=gravity&field_id=2&author=ada&region=Maine',
+      '/api/pebbles/search?q=gravity&field_id=2&author=ada&region=Maine&favorites=1&mine=1&has_photo=1&has_video=1&has_data=1',
       { credentials: 'include' }
     );
+  });
+
+  test('formatObserved keeps a date bare and shows an entered time as HH:mm', () => {
+    expect(
+      formatObserved({
+        observed_on: '2021-07-27',
+        observed_time: null,
+        observed_at: '2021-07-27T15:00:00.000Z',
+      })
+    ).toBe('2021-07-27');
+    expect(formatObserved({ observed_on: '2021-07-27', observed_time: '15:00:00' })).toBe(
+      '2021-07-27 15:00'
+    );
+    const local = new Date(2021, 6, 27, 15, 0, 0);
+    expect(formatObserved({ observed_at: local.toISOString() })).toBe('2021-07-27 15:00');
+    expect(pinLabel({ pin_name: 'Antarctica', place_name: '' })).toBe('Antarctica');
+    expect(pinLabel({ place_name: 'Lab' })).toBe('Lab');
+  });
+
+  test('publishedMapPath opens Mine on that pebble', () => {
+    expect(publishedMapPath({ pebble_id: 12 })).toBe('/?mine=1&pebble=12');
   });
 
   test('fetchMapPebbles encodes filters', async () => {

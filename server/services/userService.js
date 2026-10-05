@@ -1,6 +1,20 @@
 const { isDbHealthy, query } = require('../db');
 const { userQueries, socialQueries, organizationQueries } = require('../queries');
 
+const BLURB_MAX = 500;
+
+const normalizeBlurb = (value) => {
+  if (value == null) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  if (text.length > BLURB_MAX) {
+    const err = new Error('Blurb is too long');
+    err.status = 400;
+    throw err;
+  }
+  return text;
+};
+
 const requireDb = () => {
   if (!isDbHealthy()) {
     const err = new Error('Database is unavailable');
@@ -83,6 +97,8 @@ const updateMe = async (userId, data) => {
   const clearEmployer = hasEmployer && data.employerOrgId === null;
   const hasProfilePic = Object.prototype.hasOwnProperty.call(data, 'profilePicUrl');
   const clearProfilePic = hasProfilePic && data.profilePicUrl === null;
+  const hasBlurb = Object.prototype.hasOwnProperty.call(data, 'blurb');
+  const blurb = hasBlurb ? normalizeBlurb(data.blurb) : null;
   try {
     if (clearEmployer) {
       await query(userQueries.clearEmployer, [userId]);
@@ -111,6 +127,9 @@ const updateMe = async (userId, data) => {
       const err = new Error('User not found');
       err.status = 404;
       throw err;
+    }
+    if (hasBlurb) {
+      await query(userQueries.setBlurb, [userId, blurb]);
     }
     return getMe(userId);
   } catch (err) {

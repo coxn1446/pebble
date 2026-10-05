@@ -13,7 +13,6 @@ import {
   WelcomeFooter,
   WelcomeScroller,
   SectionHeader,
-  marketingTitleColumnClassName,
 } from './WelcomeShared';
 
 const ABOUT_JOURNEY = [
@@ -82,26 +81,29 @@ const DIFFERENT_POINTS = [
 ];
 
 const AboutJourneyItem = ({ date, src, alt, isFirst, isLast }) => (
-  <li className="relative flex min-h-0 flex-1 items-center gap-3">
-    <time className="w-20 shrink-0 text-right text-xs font-medium uppercase tracking-wide text-ink/60">
+  <li className="relative flex min-w-0 flex-1 flex-col items-center gap-1 lg:min-h-0 lg:flex-row lg:items-center lg:gap-3">
+    <time className="shrink-0 text-center text-xs font-medium uppercase tracking-wide text-ink/60 lg:w-20 lg:text-right">
       {date}
     </time>
     <span
-      className="relative flex w-4 shrink-0 self-stretch items-center justify-center"
+      className="relative hidden w-4 shrink-0 items-center justify-center self-stretch lg:flex"
       aria-hidden="true"
     >
       {isFirst ? null : <span className="welcome-timeline-line welcome-timeline-line-up" />}
       {isLast ? null : <span className="welcome-timeline-line welcome-timeline-line-down" />}
       <span className="welcome-timeline-pebble relative z-10" />
     </span>
-    <figure className="flex h-full min-h-0 w-28 shrink-0 items-center justify-center py-2 md:w-44">
+    <figure className="flex h-16 w-16 shrink-0 items-center justify-center lg:h-full lg:min-h-0 lg:w-44 lg:py-2">
       <img src={src} alt={alt} className="max-h-full w-auto max-w-full object-contain" />
     </figure>
   </li>
 );
 
-const FieldJourney = ({ stops, continueFrom = false, continueTo = false, className }) => (
-  <ol className={className} aria-label="Field journey">
+const FieldJourney = ({ stops, continueFrom = false, continueTo = false, className = '' }) => (
+  <ol
+    className={`flex w-full flex-row items-end gap-2 overflow-x-auto px-4 lg:min-h-0 lg:flex-1 lg:flex-col lg:items-stretch lg:gap-0 lg:overflow-visible lg:px-0 ${className}`}
+    aria-label="Field journey"
+  >
     {stops.map((stop, index) => (
       <AboutJourneyItem
         key={stop.place}
@@ -116,7 +118,7 @@ const FieldJourney = ({ stops, continueFrom = false, continueTo = false, classNa
 const AboutLetter = () => (
   <div className="min-h-0 w-full max-w-xl">
     <SectionHeader label="Inspiration" title="About Us" align="left" compact />
-    <div className="space-y-3 text-justify text-xs leading-snug text-ink/70">
+    <div className="space-y-3 text-justify text-sm leading-snug text-ink/70">
       <p className="font-semibold text-ink">
         Nature inspires the best things in life, and Pebble is no different.
       </p>
@@ -138,15 +140,9 @@ const AboutLetter = () => (
       <p>
         A few years ago, I realized how difficult it was to find compelling, relevant, real-world
         stories for my science classroom that were connected to content standards and ready to use
-        with students. I was tired of relying on decades-old examples (think peppered moths and the
-        Industrial Revolution) when our world was full of new stories waiting to be explored. So, I
-        started using my own.
-      </p>
-      <p>
-        In meeting other professionals through my work and travels, I realized that I wasn&apos;t
-        the only one collecting these stories. There is an incredible community of people observing,
-        documenting, and protecting our changing world, but their experiences and discoveries are
-        often scattered and not readily accessible to educators.
+        with students. There is an incredible community of people observing, documenting, and
+        protecting our changing world, but their experiences and discoveries are often scattered and
+        not readily accessible to educators.
       </p>
       <p className="font-semibold text-ink">So, I decided to build the nest.</p>
       <p>
@@ -163,7 +159,7 @@ const AboutLetter = () => (
 );
 
 const HowWeAreDifferentCard = () => (
-  <div className="w-full rounded-3xl bg-background px-6 py-10 md:px-12 md:py-14">
+  <div className="my-auto w-full rounded-3xl bg-background px-6 py-10 md:px-12 md:py-14">
     <h2 className="mb-10 font-display text-3xl font-medium text-ink md:text-4xl">
       How we&apos;re <em className="welcome-different-mark">different</em>
     </h2>
@@ -173,7 +169,7 @@ const HowWeAreDifferentCard = () => (
           <span className="welcome-check-pebble mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center text-ink">
             <CheckIcon className="h-3.5 w-3.5" />
           </span>
-          <p className="font-display text-sm leading-snug text-ink md:text-base">{point}</p>
+          <p className="font-sans text-sm leading-snug text-ink md:text-base">{point}</p>
         </li>
       ))}
     </ul>
@@ -186,18 +182,14 @@ const HowWeAreDifferentCard = () => (
 const AboutUsSection = () => (
   <section
     id="about-us"
-    className="relative flex min-h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface lg:h-dvh"
+    className="relative flex h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface"
   >
     <WelcomeHeader />
-    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col lg:flex-row">
-      <div className="flex min-h-0 w-full flex-col self-stretch pt-24 lg:w-2/5">
-        <FieldJourney
-          stops={JOURNEY_FIRST}
-          continueTo
-          className="flex min-h-0 flex-1 flex-col"
-        />
+    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-y-hidden">
+      <div className="flex w-full shrink-0 flex-col self-stretch pt-24 lg:min-h-0 lg:w-2/5 lg:shrink">
+        <FieldJourney stops={JOURNEY_FIRST} continueTo />
       </div>
-      <div className={`${marketingTitleColumnClassName} lg:w-3/5`}>
+      <div className="flex w-full shrink-0 flex-col px-4 pt-4 pb-8 md:px-8 lg:min-h-0 lg:w-3/5 lg:flex-1 lg:items-center lg:justify-center lg:overflow-y-auto lg:px-8 lg:pt-24 lg:pb-8">
         <AboutLetter />
       </div>
     </div>
@@ -207,17 +199,13 @@ const AboutUsSection = () => (
 const HowWeAreDifferentSection = () => (
   <section
     id="how-we-are-different"
-    className="flex min-h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface lg:h-dvh"
+    className="flex h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface"
   >
-    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col lg:flex-row">
-      <div className="flex min-h-0 w-full flex-col self-stretch lg:w-2/5">
-        <FieldJourney
-          stops={JOURNEY_SECOND}
-          continueFrom
-          className="flex min-h-0 flex-1 flex-col"
-        />
+    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-y-hidden">
+      <div className="flex w-full shrink-0 flex-col self-stretch pt-6 lg:min-h-0 lg:w-2/5 lg:shrink lg:pt-0">
+        <FieldJourney stops={JOURNEY_SECOND} continueFrom />
       </div>
-      <div className="flex min-h-0 w-full flex-1 items-center px-4 py-8 md:px-8 lg:w-3/5">
+      <div className="flex w-full shrink-0 flex-col justify-center px-4 py-8 md:px-8 lg:min-h-0 lg:h-full lg:w-3/5 lg:flex-1 lg:items-center lg:overflow-y-auto">
         <HowWeAreDifferentCard />
       </div>
     </div>

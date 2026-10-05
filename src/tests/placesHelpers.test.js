@@ -4,6 +4,7 @@ import {
   loadGoogleMaps3dApi,
   loadGoogleMapsApi,
   loadGooglePlacesApi,
+  placeFromGeocoderResult,
   placeFromNewPlace,
 } from '../helpers/placesHelpers';
 
@@ -23,6 +24,25 @@ describe('placesHelpers', () => {
       placeAdminArea: null,
       placeCountry: null,
     });
+  });
+
+  test('placeFromGeocoderResult keeps coordinates when the name is unknown', () => {
+    expect(placeFromGeocoderResult(null, -51.2, -60.1)).toMatchObject({
+      placeName: '',
+      placeLat: -51.2,
+      placeLng: -60.1,
+    });
+    expect(
+      placeFromGeocoderResult(
+        {
+          place_id: 'fish',
+          formatted_address: 'Fish Islands',
+          address_components: [],
+        },
+        -51.2,
+        -60.1
+      ).placeName
+    ).toBe('Fish Islands');
   });
 
   test('placeFromNewPlace maps Place fields and address components', () => {

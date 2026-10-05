@@ -4,6 +4,12 @@ export const MAP_PIN_COLOR = '#2563EB';
 /** Default camera range (meters) for a full-Earth globe view on Map3DElement. */
 export const GLOBE_CAMERA_RANGE = 18_000_000;
 
+/**
+ * Closest camera range (meters) that still shows a pin with recognizable terrain.
+ * Nearer ranges on Map3DElement drape a ground photo across the globe.
+ */
+export const PLACE_CAMERA_RANGE = 120_000;
+
 /** Approximate on-screen pin diameter in CSS pixels (matches `.pebble-map-pin`). */
 export const MAP_PIN_DIAMETER_PX = 32;
 
@@ -42,11 +48,11 @@ export const zoomFromCameraRange = (rangeMeters) => {
 /** Camera range that frames a pin group for flyCameraTo. */
 export const rangeForPins = (pebbles) => {
   const bounds = boundsFromPins(pebbles);
-  if (!bounds) return 5000;
+  if (!bounds) return PLACE_CAMERA_RANGE;
   const latSpan = bounds.north - bounds.south;
   const lngSpan = bounds.east - bounds.west;
-  const maxDeg = Math.max(latSpan, lngSpan, 0.02);
-  return Math.min(Math.max(maxDeg * 111_000 * 2.5, 2500), 8_000_000);
+  const fitted = Math.max(latSpan, lngSpan) * 111_000 * 2.5;
+  return Math.min(Math.max(fitted, PLACE_CAMERA_RANGE), 8_000_000);
 };
 
 export const isMappablePebble = (pebble) => {

@@ -8,6 +8,7 @@ import authReducer from '../store/auth.reducer';
 import { NativeProvider } from '../utils/NativeContext';
 
 jest.mock('../helpers/pebbleHelpers', () => ({
+  ...jest.requireActual('../helpers/pebbleHelpers'),
   fetchPebble: jest.fn(),
   fetchFeed: jest.fn(),
   searchPebbles: jest.fn(),

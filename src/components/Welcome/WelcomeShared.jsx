@@ -1,8 +1,9 @@
-import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import BrandMark from '../Brand/BrandMark';
+import { CloseIcon, MenuIcon } from '../Icons/Icons';
 import logoSrc from '../../resources/pebble-logo.png';
-import peopleIcon from '../../resources/icon - people.png';
+import signInIcon from '../../resources/icon-sign-in.png';
 
 export const WELCOME_TAGLINE = 'Collect • Connect • Create';
 
@@ -21,62 +22,134 @@ const FOOTER_LINKS = [
   { label: 'Contact', href: '#contact' },
 ];
 
-export const SectionHeader = ({ label, title, align = 'center', compact = false, children }) => (
+export const SectionHeader = ({
+  label,
+  title,
+  align = 'center',
+  compact = false,
+  className = '',
+  titleClassName = '',
+  children,
+}) => (
   <div
-    className={`${compact ? 'mb-5 md:mb-6' : 'mb-12 md:mb-16'} ${
-      align === 'left' ? 'text-left' : 'text-center'
-    }`}
+    className={`flex flex-col gap-3 ${
+      className || (compact ? 'mb-5 md:mb-6' : 'mb-12 md:mb-16')
+    } ${align === 'left' ? 'text-left' : 'text-center'}`}
   >
-    <p className="mb-2 text-sm font-semibold uppercase tracking-tagline text-moss">{label}</p>
-    <h2 className="font-display text-4xl font-medium text-ink md:text-5xl">{title}</h2>
+    <p className="text-sm font-semibold uppercase leading-normal tracking-tagline text-moss">{label}</p>
+    <h2 className={`font-display text-4xl font-medium text-ink md:text-5xl ${titleClassName || 'leading-snug'}`}>
+      {title}
+    </h2>
     {children}
   </div>
 );
 
-const navLinkClass = ({ isActive }) =>
-  `font-display text-lg font-medium leading-none transition hover:text-ocean ${
-    isActive ? 'text-ocean' : 'text-ink'
-  }`;
+const navToneClass = ({ isActive }) =>
+  `font-medium leading-none transition hover:text-ocean ${isActive ? 'text-ocean' : 'text-ink'}`;
 
-export const WelcomeHeader = () => (
-  <header className="absolute inset-x-0 top-0 z-20">
-    <div
-      className="welcome-nav-fade pointer-events-none absolute inset-x-0 top-0 h-44"
-      aria-hidden="true"
-    />
-    <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-6">
-      <div className="flex items-center gap-2 md:gap-3">
-        <Link to="/" aria-label="Pebble home" className="shrink-0">
-          <img src={logoSrc} alt="" className="h-11 w-11 rounded-full" />
-        </Link>
-        <nav className="hidden h-11 items-center gap-6 md:flex" aria-label="Welcome">
-          <NavLink to="/" end className={({ isActive }) => `${navLinkClass({ isActive })} lowercase`}>
-            pebble
-          </NavLink>
-          <NavLink to="/about-us" className={navLinkClass}>
-            About Us
-          </NavLink>
-          <NavLink to="/how-it-works" className={navLinkClass}>
-            How it Works
-          </NavLink>
-        </nav>
-      </div>
-      <div className="flex items-center gap-4">
-        <Link to="/login" className="text-lg font-medium text-ink transition hover:text-ocean">
-          Sign In
-        </Link>
-        <Link to="/login" aria-label="Sign in" className="inline-flex items-center transition hover:opacity-80">
-          <img src={peopleIcon} alt="" className="h-10 w-10" />
-        </Link>
-      </div>
-    </div>
-  </header>
+const navLinkClass = (state) => `${navToneClass(state)} font-sans text-xl`;
+
+const wordmarkClass = (state) => `${navToneClass(state)} font-display text-2xl lowercase`;
+
+const MarketingNavLinks = ({ onNavigate }) => (
+  <>
+    <NavLink to="/" end className={wordmarkClass} onClick={onNavigate}>
+      pebble
+    </NavLink>
+    <NavLink to="/about-us" className={navLinkClass} onClick={onNavigate}>
+      About Us
+    </NavLink>
+    <NavLink to="/how-it-works" className={navLinkClass} onClick={onNavigate}>
+      How it Works
+    </NavLink>
+  </>
 );
+
+export const WelcomeHeader = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  return (
+    <header className="absolute inset-x-0 top-0 z-20 pt-safe-top">
+      <div
+        className="welcome-nav-fade pointer-events-none absolute inset-0"
+        aria-hidden="true"
+      />
+      <div
+        data-testid="welcome-nav-bar"
+        className="relative flex w-full items-center justify-between gap-4 px-4 py-4 lg:items-baseline lg:py-6"
+      >
+        <div className="relative flex items-center gap-2 md:gap-3 lg:block">
+          <Link
+            to="/"
+            aria-label="Pebble home"
+            className="shrink-0 lg:absolute lg:top-1/2 lg:left-0 lg:-translate-y-1/2"
+          >
+            <img src={logoSrc} alt="" className="h-11 w-11" />
+          </Link>
+          <nav className="hidden items-baseline gap-6 lg:flex lg:pl-14" aria-label="Welcome">
+            <MarketingNavLinks />
+          </nav>
+          <button
+            type="button"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-ink lg:hidden"
+            aria-expanded={menuOpen}
+            aria-controls="welcome-menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <CloseIcon className="h-6 w-6" /> : <MenuIcon className="h-6 w-6" />}
+          </button>
+        </div>
+        <div className="relative flex items-center gap-2 sm:gap-4 lg:block lg:pr-14">
+          <Link
+            to="/login"
+            className="font-sans text-xl font-medium leading-none text-ink transition hover:text-ocean"
+          >
+            Sign In
+          </Link>
+          <Link
+            to="/login"
+            aria-label="Sign in"
+            className="inline-flex items-center transition hover:opacity-80 lg:absolute lg:top-1/2 lg:right-0 lg:-translate-y-1/2"
+          >
+            <img src={signInIcon} alt="" className="h-11 w-11" />
+          </Link>
+        </div>
+      </div>
+      {menuOpen ? (
+        <nav
+          id="welcome-menu"
+          data-testid="welcome-menu"
+          aria-label="Welcome menu"
+          className="relative flex flex-col gap-4 border-b border-border bg-surface px-4 py-4 lg:hidden"
+        >
+          <MarketingNavLinks onNavigate={closeMenu} />
+        </nav>
+      ) : null}
+    </header>
+  );
+};
 
 export const WelcomeFooter = () => (
   <footer className="w-full shrink-0 bg-ocean/10">
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-8 md:py-6">
-      <BrandMark size="sm" to="/" />
+    <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-2 px-4 py-2 md:flex-row md:justify-between md:gap-4 md:px-8 md:py-2">
+      <BrandMark size="sm" to="/" outline />
       <nav className="flex flex-wrap items-center gap-6 md:gap-10" aria-label="Footer">
         {FOOTER_LINKS.map(({ label, href }) => (
           <a

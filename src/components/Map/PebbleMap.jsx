@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createFieldGlyphElement, createPenguinAvatarElement } from '../Icons/Icons';
+import { getDefaultAvatarPinClass } from '../../helpers/avatarHelpers';
 import { fetchPlacesApiKey, loadGoogleMaps3dApi } from '../../helpers/placesHelpers';
 import {
   clusterMapPins,
@@ -13,19 +15,60 @@ const TRAVEL_MS = 280;
 const SYNC_DEBOUNCE_MS = 180;
 const POS_EPSILON = 1e-6;
 
-const createPinElement = (label, pinKind = 'pebble', animateIn = false) => {
-  const button = document.createElement('button');
+const firstFieldName = (pin) => pin?.fields?.[0]?.name || pin?.phenomena?.[0]?.field_name || '';
+
+const pinClassName = (item, animateIn = false) => {
+  const isGroup = item.count > 1;
+  const fieldName = firstFieldName(item.pins?.[0]);
+  let kind = 'pebble-map-pin';
+  if (isGroup) kind = 'pebble-map-pin pebble-map-pin--mixed';
+  else if (item.pinKind === 'user') kind = 'pebble-map-pin pebble-map-pin--user pebble-map-pin--avatar';
+  else if (fieldName) kind = 'pebble-map-pin pebble-map-pin--glyph';
+  return `${kind}${animateIn ? ' pebble-map-pin--enter' : ''}`;
+};
+
+const paintPinElement = (button, item, animateIn = false) => {
+  const isGroup = item.count > 1;
+  const pin = item.pins?.[0];
   button.type = 'button';
-  const kindClass =
-    pinKind === 'user'
-      ? 'pebble-map-pin pebble-map-pin--user'
-      : pinKind === 'mixed'
-        ? 'pebble-map-pin pebble-map-pin--mixed'
-        : 'pebble-map-pin';
-  button.className = `${kindClass}${animateIn ? ' pebble-map-pin--enter' : ''}`;
-  button.textContent = label;
-  button.setAttribute('aria-label', label);
+  button.className = pinClassName(item, animateIn);
+  button.replaceChildren();
+  if (isGroup) {
+    button.textContent = String(item.count);
+    button.setAttribute('aria-label', String(item.count));
+    return button;
+  }
+  if (item.pinKind === 'user') {
+    const label = pin?.display_name || pin?.title || pin?.username || 'Person';
+    button.setAttribute('aria-label', label);
+    if (pin?.profile_pic_url) {
+      const img = document.createElement('img');
+      img.src = pin.profile_pic_url;
+      img.alt = '';
+      button.append(img);
+      return button;
+    }
+    button.className = `${button.className} ${getDefaultAvatarPinClass(pin?.user_id)}`;
+    button.append(createPenguinAvatarElement());
+    return button;
+  }
+  const fieldName = firstFieldName(pin);
+  if (fieldName) {
+    button.setAttribute('aria-label', fieldName);
+    const glyph = createFieldGlyphElement(fieldName);
+    if (glyph) {
+      button.append(glyph);
+      return button;
+    }
+  }
+  button.textContent = '•';
+  button.setAttribute('aria-label', 'Pin');
   return button;
+};
+
+const createPinElement = (item, animateIn = false) => {
+  const button = document.createElement('button');
+  return paintPinElement(button, item, animateIn);
 };
 
 const readPosition = (marker) => {
@@ -108,6 +151,7 @@ const PebbleMap = ({
   onViewportChange,
   focusTarget = null,
   splitLayout = false,
+  resetSignal = 0,
 }) => {
   const hostRef = useRef(null);
   const mapRef = useRef(null);
@@ -211,13 +255,6 @@ const PebbleMap = ({
     map.heading = endCamera.heading;
   };
 
-  const pinKindClass = (pinKind) =>
-    pinKind === 'user'
-      ? 'pebble-map-pin pebble-map-pin--user'
-      : pinKind === 'mixed'
-        ? 'pebble-map-pin pebble-map-pin--mixed'
-        : 'pebble-map-pin';
-
   const mountClusterMarker = (item, position, animateIn) => {
     const map = mapRef.current;
     const MarkerInteractiveElement = maps3dRef.current?.MarkerInteractiveElement;
@@ -225,16 +262,11 @@ const PebbleMap = ({
     if (markersByKeyRef.current.has(item.key)) return markersByKeyRef.current.get(item.key).marker;
 
     const isGroup = item.count > 1;
-    const label = isGroup
-      ? String(item.count)
-      : item.pinKind === 'user'
-        ? '☺'
-        : '•';
     const marker = new MarkerInteractiveElement({
       position: { lat: position.lat, lng: position.lng, altitude: 0 },
     });
     marker.title = isGroup ? `${item.count} pins` : item.pins[0]?.title || 'Pin';
-    const pinEl = createPinElement(label, item.pinKind, animateIn);
+    const pinEl = createPinElement(item, animateIn);
     marker.append(pinEl);
     const onClick = (event) => {
       event?.stopPropagation?.();
@@ -421,14 +453,7 @@ const PebbleMap = ({
         entry.marker.title = isGroup
           ? `${item.count} pins`
           : item.pins[0]?.title || 'Pin';
-        if (entry.pinEl) {
-          entry.pinEl.textContent = isGroup
-            ? String(item.count)
-            : item.pinKind === 'user'
-              ? '☺'
-              : '•';
-          entry.pinEl.className = pinKindClass(item.pinKind);
-        }
+        if (entry.pinEl) paintPinElement(entry.pinEl, item);
         entry.pins = item.pins;
       })
     );
@@ -550,16 +575,51 @@ const PebbleMap = ({
 
   useEffect(() => {
     if (!mapsReady || !focusTarget) return;
+    const fromPins = (Array.isArray(focusTarget.pins) ? focusTarget.pins : []).filter((pin) => {
+      const lat = Number(pin.place_lat);
+      const lng = Number(pin.place_lng);
+      return Number.isFinite(lat) && Number.isFinite(lng);
+    });
     const lat = Number(focusTarget.lat);
     const lng = Number(focusTarget.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const targetPins = fromPins.length
+      ? fromPins
+      : Number.isFinite(lat) && Number.isFinite(lng)
+        ? [{ place_lat: lat, place_lng: lng }]
+        : [];
+    if (!targetPins.length) return;
     beginSuppress(FLY_DURATION_MS + 80);
-    flyToPins([{ place_lat: lat, place_lng: lng }]);
+    flyToPins(targetPins);
     const timer = window.setTimeout(emitViewport, FLY_DURATION_MS + 50);
     return () => window.clearTimeout(timer);
     // focusTarget.nonce lets the same place be re-selected
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget, mapsReady]);
+
+  useEffect(() => {
+    if (!mapsReady || !resetSignal) return;
+    const map = mapRef.current;
+    if (!map) return;
+    beginSuppress(FLY_DURATION_MS + 80);
+    const home = {
+      center: GLOBE_CENTER,
+      range: GLOBE_CAMERA_RANGE,
+      tilt: 0,
+      heading: 0,
+    };
+    if (typeof map.flyCameraTo === 'function') {
+      map.flyCameraTo({ endCamera: home, durationMillis: FLY_DURATION_MS });
+    } else {
+      map.center = home.center;
+      map.range = home.range;
+      map.tilt = 0;
+      map.heading = 0;
+    }
+    const timer = window.setTimeout(emitViewport, FLY_DURATION_MS + 50);
+    return () => window.clearTimeout(timer);
+    // resetSignal is the only trigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetSignal, mapsReady]);
 
   if (keyMissing) {
     return (

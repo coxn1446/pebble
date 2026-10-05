@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
+import DeleteCollectionConfirm from '../components/Collections/DeleteCollectionConfirm';
 import { selectUser } from '../store/auth.reducer';
 import {
   acceptCollectionInvite,
+  deleteCollection,
   fetchCollection,
   inviteToCollection,
   removePebbleFromCollection,
@@ -12,9 +14,11 @@ import {
 
 const CollectionDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const user = useSelector(selectUser);
   const [collection, setCollection] = useState(null);
   const [inviteUserId, setInviteUserId] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = async () => {
     try {
@@ -31,7 +35,7 @@ const CollectionDetail = () => {
 
   if (!collection) return <p className="text-sm text-muted">Loading…</p>;
 
-  const isOwner = user?.user_id === collection.owner_id;
+  const isOwner = Number(user?.user_id) === Number(collection.owner_id);
   const pendingInvite = collection.members?.some(
     (m) => m.user_id === user?.user_id && m.status === 'invited'
   );
@@ -42,8 +46,18 @@ const CollectionDetail = () => {
         <h1 className="font-display text-2xl font-semibold text-ink">{collection.name}</h1>
         <p className="text-sm text-muted">
           {collection.is_private ? 'Private' : 'Public'}
-          {collection.is_collaborative ? ' · Collaborative' : ''}
+          {collection.is_collaborative ? ' · Collaborate' : ''}
         </p>
+        {isOwner ? (
+          <button
+            type="button"
+            aria-label="Delete collection"
+            onClick={() => setConfirmDelete(true)}
+            className="mt-3 text-sm text-muted hover:text-ink"
+          >
+            Delete
+          </button>
+        ) : null}
       </div>
       {pendingInvite ? (
         <button
@@ -115,6 +129,19 @@ const CollectionDetail = () => {
           </div>
         ))}
       </div>
+      <DeleteCollectionConfirm
+        collection={confirmDelete ? collection : null}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={async () => {
+          try {
+            await deleteCollection(id);
+            toast.success('Collection deleted');
+            navigate('/profile');
+          } catch (err) {
+            toast.error(err.message || 'Could not delete collection');
+          }
+        }}
+      />
     </div>
   );
 };

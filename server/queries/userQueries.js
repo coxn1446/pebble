@@ -18,6 +18,7 @@ const USER_FIELDS = `
   place_admin_area,
   place_country,
   profile_pic_url,
+  blurb,
   content_searchable,
   created_at,
   updated_at
@@ -40,6 +41,7 @@ const PUBLIC_USER_FIELDS = `
   place_admin_area,
   place_country,
   profile_pic_url,
+  blurb,
   content_searchable,
   created_at
 `;
@@ -119,6 +121,13 @@ const clearEmployer = `
 const clearProfilePic = `
   UPDATE users
   SET profile_pic_url = NULL, updated_at = NOW()
+  WHERE user_id = $1
+  RETURNING ${USER_FIELDS}
+`;
+
+const setBlurb = `
+  UPDATE users
+  SET blurb = $2, updated_at = NOW()
   WHERE user_id = $1
   RETURNING ${USER_FIELDS}
 `;
@@ -236,6 +245,7 @@ module.exports = {
   updateProfile,
   clearEmployer,
   clearProfilePic,
+  setBlurb,
   followerCount,
   followingCount,
   listFollowers,

@@ -41,6 +41,24 @@ describe('PebbleCard', () => {
     expect(screen.queryByText('@scientist')).not.toBeInTheDocument();
   });
 
+  test('shows an other tag on the feed card the same way as a phenomenon', () => {
+    render(
+      <MemoryRouter>
+        <PebbleCard
+          pebble={createMockPebble({
+            title: 'Scorpion',
+            phenomena: [{ phenomenon_id: 3, name: 'photosynthesis', field_name: 'Biology' }],
+            other_tags: [{ other_tag_id: 8, name: 'nocturnal hunter' }],
+          })}
+        />
+      </MemoryRouter>
+    );
+    const saved = screen.getByText('photosynthesis');
+    const other = screen.getByText('nocturnal hunter');
+    expect(saved).toHaveClass('rounded-xl', 'bg-background');
+    expect(other).toHaveClass('rounded-xl', 'bg-background', 'text-xs', 'text-muted');
+  });
+
   test('renders hero as a full-height square thumbnail when present', () => {
     const { container } = render(
       <MemoryRouter>
@@ -78,5 +96,36 @@ describe('PebbleCard', () => {
 
     fireEvent.click(screen.getByText('Sample pebble'));
     expect(mockNavigate).toHaveBeenCalledWith('/pebbles/10');
+  });
+
+  test('shows the date alone or with a 24-hour time', () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <PebbleCard
+          pebble={createMockPebble({
+            pin_name: 'Antarctica',
+            place_name: '',
+            observed_on: '2021-07-27',
+            observed_time: null,
+            observed_at: null,
+          })}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Antarctica · 2021-07-27')).toBeInTheDocument();
+    expect(screen.queryByText(/00:00/)).not.toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <PebbleCard
+          pebble={createMockPebble({
+            pin_name: 'Antarctica',
+            observed_on: '2021-07-27',
+            observed_time: '15:00:00',
+          })}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Antarctica · 2021-07-27 15:00')).toBeInTheDocument();
   });
 });

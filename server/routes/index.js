@@ -11,6 +11,7 @@ const socialRoutes = require('./social');
 const flagsRoutes = require('./flags');
 const notificationsRoutes = require('./notifications');
 const searchRoutes = require('./search');
+const weatherRoutes = require('./weather');
 const { isDbHealthy } = require('../db');
 
 module.exports = () => {
@@ -50,6 +51,7 @@ module.exports = () => {
   router.use('/flags', flagsRoutes());
   router.use('/notifications', notificationsRoutes());
   router.use('/search', searchRoutes());
+  router.use('/weather', weatherRoutes());
 
   return router;
 };

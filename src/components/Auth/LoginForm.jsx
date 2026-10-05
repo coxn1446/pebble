@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeOffIcon } from '../Icons/Icons';
-import peopleIcon from '../../resources/icon - people.png';
+import signInIcon from '../../resources/icon-sign-in-people.png';
 
 const inputClass =
   'w-full rounded-full border border-border bg-background px-4 py-2.5 text-base text-ink outline-none transition placeholder:text-pebble focus:border-accent';
@@ -19,7 +19,7 @@ const LoginForm = ({ onSubmit, isSubmitting }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       <div>
-        <label className="block">
+        <label className="block text-left">
           <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ink">
             Email address
           </span>
@@ -70,10 +70,14 @@ const LoginForm = ({ onSubmit, isSubmitting }) => {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mx-auto flex items-center justify-center gap-3 rounded-full border-2 border-ink bg-surface px-8 py-1 text-ink transition hover:bg-ink hover:text-white disabled:opacity-60"
+        className="group mx-auto flex items-center justify-center gap-3 rounded-full border-2 border-ink bg-surface px-6 py-1.5 text-ink transition hover:bg-ink hover:text-white disabled:opacity-60"
       >
-        <img src={peopleIcon} alt="" className="h-12 w-12" />
-        <span className="text-sm font-semibold uppercase tracking-wide">
+        <img
+          src={signInIcon}
+          alt=""
+          className="h-8 w-8 transition group-hover:brightness-0 group-hover:invert"
+        />
+        <span className="text-base font-semibold uppercase tracking-wide">
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </span>
       </button>

@@ -1,8 +1,13 @@
 @import 'tailwindcss';
 
 /*
- * Brand faces: Avenir (body) + Fraunces (headings).
- * Avenir resolves via local installs; Fraunces is loaded from Google Fonts in index.html.
+ * Type roles. Swap a face by editing the two stacks in @theme below
+ * (and the matching fontFamily entries in tailwind.config.js).
+ *   Headers (--font-display / font-display): page titles, the pebble wordmark,
+ *     audience captions, Collect Connect Create, and other heading copy.
+ *     Currently Ovo, loaded from Google Fonts in index.html.
+ *   Body (--font-sans / font-sans): paragraphs and nav links
+ *     (About Us, How it Works, Sign In). Currently Avenir (local install).
  */
 @font-face {
   font-family: 'Avenir';
@@ -14,8 +19,10 @@
 
 /* Tokens mirror tailwind.config.js — keep both files in sync. */
 @theme {
+  /* BODY FONT — paragraphs and secondary nav. Change this family to try another body face. */
   --font-sans: 'Avenir', 'Avenir Next', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  /* HEADER FONT — titles, wordmark, captions. Change this family to try another header face. */
+  --font-display: 'Ovo', ui-serif, Georgia, serif;
 
   --color-slate: #334155;
   --color-ocean: #2563eb;
@@ -106,7 +113,10 @@
 html,
 body,
 #root {
-  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 :root {
@@ -123,6 +133,10 @@ body {
 }
 
 body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  overflow: hidden;
   margin: 0;
   font-family: var(--font-sans);
   font-size: 16px;
@@ -145,15 +159,9 @@ h6 {
   font-family: var(--font-display);
 }
 
-/* Soft gray wash behind the guest welcome top nav */
+/* Nav wash: #C5C5C5 fading evenly across the full bar */
 .welcome-nav-fade {
-  background-image: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--color-pebble) 70%, var(--color-surface)) 0%,
-    color-mix(in srgb, var(--color-pebble) 35%, var(--color-surface)) 40%,
-    color-mix(in srgb, var(--color-background) 55%, transparent) 70%,
-    transparent 100%
-  );
+  background-image: linear-gradient(to bottom, #c5c5c5 0%, transparent 100%);
 }
 
 /* Organic pebble blobs for the guest welcome audience section */
@@ -333,7 +341,32 @@ h6 {
 }
 
 .pebble-map-pin--user {
+  background: var(--color-ocean);
+}
+
+.pebble-map-pin--user.avatar-bg-ocean,
+.pebble-map-pin--user.avatar-bg-ocean:hover {
+  background: var(--color-ocean);
+}
+
+.pebble-map-pin--user.avatar-bg-moss,
+.pebble-map-pin--user.avatar-bg-moss:hover {
   background: var(--color-moss);
+}
+
+.pebble-map-pin--user.avatar-bg-sandstone,
+.pebble-map-pin--user.avatar-bg-sandstone:hover {
+  background: var(--color-sandstone);
+}
+
+.pebble-map-pin--user.avatar-bg-pebble,
+.pebble-map-pin--user.avatar-bg-pebble:hover {
+  background: var(--color-pebble);
+}
+
+.pebble-map-pin--user.avatar-bg-ocean-hover,
+.pebble-map-pin--user.avatar-bg-ocean-hover:hover {
+  background: var(--color-ocean-hover);
 }
 
 .pebble-map-pin--mixed {
@@ -361,4 +394,40 @@ h6 {
 .pebble-map-pin--mixed:hover {
   background: var(--color-sandstone);
   filter: brightness(0.97);
+}
+
+.pebble-map-pin--glyph {
+  width: 2rem;
+  min-width: 2rem;
+  padding: 0;
+}
+
+.pebble-map-pin--glyph .field-glyph {
+  width: 1.25rem;
+  height: 1.25rem;
+  filter: brightness(0) invert(1);
+}
+
+button.bg-accent .field-glyph {
+  filter: brightness(0) invert(1);
+}
+
+.pebble-map-pin--avatar {
+  width: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  overflow: hidden;
+  font-size: 1rem;
+}
+
+.pebble-map-pin--avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 9999px;
+}
+
+.pebble-map-pin--avatar svg[data-icon='penguin'] {
+  width: 78%;
+  height: 78%;
 }

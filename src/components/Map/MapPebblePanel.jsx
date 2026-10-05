@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import FieldNotesViewer from '../FieldNotes/FieldNotesViewer';
+import { formatObserved, pinLabel } from '../../helpers/pebbleHelpers';
 
 const groupHeading = (pins) => {
   if (!pins?.length) return 'Pebbles';
   if (pins.length === 1) return pins[0].title || 'Pebble';
-  const placeNames = [...new Set(pins.map((p) => p.place_name).filter(Boolean))];
+  const placeNames = [...new Set(pins.map((p) => pinLabel(p)).filter(Boolean))];
   if (placeNames.length === 1) {
     return `${pins.length} pebbles at ${placeNames[0]}`;
   }
@@ -97,7 +98,8 @@ const MapPebblePanel = ({
                 <p className="font-display text-sm font-semibold text-ink">{pin.title}</p>
                 <p className="mt-0.5 text-xs text-muted">
                   {pin.author_display_name || pin.author_username || 'Unknown'}
-                  {pin.place_name ? ` · ${pin.place_name}` : ''}
+                  {pinLabel(pin) ? ` · ${pinLabel(pin)}` : ''}
+                  {formatObserved(pin) ? ` · ${formatObserved(pin)}` : ''}
                 </p>
               </button>
             </li>
@@ -149,7 +151,8 @@ const MapPebblePanel = ({
             <Link to={`/u/${pebble.author_username}`} className="text-accent hover:underline">
               {pebble.author_display_name || pebble.author_username}
             </Link>
-            {pebble.place_name ? ` · ${pebble.place_name}` : ''}
+            {pinLabel(pebble) ? ` · ${pinLabel(pebble)}` : ''}
+            {formatObserved(pebble) ? ` · ${formatObserved(pebble)}` : ''}
           </p>
         </div>
         <button
@@ -163,15 +166,23 @@ const MapPebblePanel = ({
 
       {pebble.description ? <p className="text-sm text-ink">{pebble.description}</p> : null}
 
-      {pebble.phenomena?.length ? (
+      {pebble.phenomena?.length || pebble.other_tags?.length ? (
         <div className="flex flex-wrap gap-2">
-          {pebble.phenomena.map((ph) => (
+          {(pebble.phenomena || []).map((ph) => (
             <span
               key={ph.phenomenon_id}
               className="rounded-xl bg-background px-2 py-0.5 text-xs text-muted"
             >
               {ph.field_name ? `${ph.field_name}: ` : ''}
               {ph.name}
+            </span>
+          ))}
+          {(pebble.other_tags || []).map((tag) => (
+            <span
+              key={tag.other_tag_id || tag.name}
+              className="rounded-xl bg-background px-2 py-0.5 text-xs text-muted"
+            >
+              {tag.name}
             </span>
           ))}
         </div>

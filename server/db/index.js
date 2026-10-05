@@ -6,7 +6,12 @@
  *
  * Local auth requires a healthy database (schema.sql + migrations).
  */
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Keep DATE and TIME as the calendar values that were stored. Parsing them as
+// JS Dates shifts the day when the server timezone is not UTC.
+types.setTypeParser(1082, (value) => value);
+types.setTypeParser(1083, (value) => value);
 
 let pool = null;
 let dbHealthy = false;

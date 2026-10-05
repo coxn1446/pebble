@@ -27,7 +27,12 @@ describe('Login', () => {
   test('renders sign-in form without a public register link', () => {
     renderLogin();
 
-    expect(screen.getByRole('heading', { name: 'Sign in to Pebble' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign in to pebble' })).toBeInTheDocument();
+    document.querySelectorAll('[aria-label="Collect • Connect • Create"] [aria-hidden="true"]').forEach(
+      (dot) => {
+        expect(dot).toHaveClass('text-ink');
+      }
+    );
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('researcher@institute.org')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Forgot?' })).toBeInTheDocument();
@@ -37,18 +42,21 @@ describe('Login', () => {
 
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
     expect(hrefs).not.toContain('/register');
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
-    expect(screen.getByRole('contentinfo')).toHaveClass('bg-ocean/10');
-    expect(screen.getByRole('contentinfo').parentElement).toHaveClass('bg-surface');
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+    expect(screen.getByText('Email address').closest('label')).toHaveClass('text-left');
 
-    const card = screen.getByRole('heading', { name: 'Sign in to Pebble' }).closest('.border');
+    const card = screen.getByRole('heading', { name: 'Sign in to pebble' }).closest('.border');
     expect(card).toHaveClass('border-border', 'bg-ocean/10');
+    expect(card.closest('.bg-surface')).toBeTruthy();
+    expect(card.closest('.overflow-y-auto')).toHaveClass('pt-safe-top', 'pb-safe-bottom');
     expect(card).toContainElement(screen.getByRole('img', { name: 'Pebble' }));
     expect(card).toContainElement(screen.getByRole('link', { name: 'Continue with Apple' }));
-    expect(card).not.toContainElement(screen.getByRole('contentinfo'));
     expect(screen.getByRole('button', { name: 'Sign in' }).querySelector('img')).toHaveClass(
-      'h-12',
-      'w-12'
+      'h-8',
+      'w-8',
+      'group-hover:brightness-0',
+      'group-hover:invert'
     );
+    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveClass('group', 'px-6', 'py-1.5');
   });
 });

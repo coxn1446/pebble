@@ -47,14 +47,14 @@ const ContentArea = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="flex h-dvh items-center justify-center">
+      <div className="flex h-dvh max-h-dvh items-center justify-center overflow-hidden">
         <Loading />
       </div>
     );
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden">
+    <div className="flex h-dvh max-h-dvh min-h-0 overflow-hidden">
       {showNav ? <Nav /> : null}
       <div
         data-testid="content-pane"
@@ -64,7 +64,7 @@ const ContentArea = ({ children }) => {
             ? 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
             : isMarketingShell || isGuestAuth
               ? 'min-h-0 min-w-0 flex-1 overflow-hidden'
-              : 'min-h-0 min-w-0 flex-1 overflow-y-auto'
+              : 'min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-none'
         }
       >
         <main

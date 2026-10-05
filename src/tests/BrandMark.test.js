@@ -38,6 +38,13 @@ describe('BrandMark', () => {
     expect(screen.getByAltText('Pebble')).toBeInTheDocument();
   });
 
+  test('can render the logo as a white shape with a black outline', () => {
+    renderMark({ outline: true, showWordmark: false });
+
+    expect(screen.getByAltText('Pebble')).toHaveClass('logo-outline');
+    expect(screen.getByAltText('Pebble')).not.toHaveClass('grayscale');
+  });
+
   test('applies float animation class when animated', () => {
     renderMark({ animated: true, showWordmark: false });
 

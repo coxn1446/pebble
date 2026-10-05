@@ -38,7 +38,7 @@ const Nav = () => {
   };
 
   return (
-    <aside className="flex h-dvh w-56 shrink-0 flex-col border-r border-border/80 bg-surface/80 px-4 py-6 backdrop-blur-md">
+    <aside className="flex h-full min-h-0 w-56 shrink-0 flex-col overflow-y-auto border-r border-border/80 bg-surface/80 px-4 py-6 backdrop-blur-md">
       <BrandMark size="sm" to="/" />
       <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1">
         <NavLink to="/" end className={linkClass}>
@@ -55,10 +55,13 @@ const Nav = () => {
           ) : null}
         </NavLink>
         <NavLink to="/profile" className={linkClass}>
-          <UserAvatar user={user} className="h-6 w-6 rounded-full" emojiClassName="text-sm" />
+          <UserAvatar user={user} className="h-6 w-6" />
           Profile
         </NavLink>
-        <div className="mt-auto pt-6">
+        <div className="mt-auto flex flex-col gap-2 pt-6">
+          <NavLink to="/how-it-works" className="rounded-2xl px-3 py-2 text-sm text-muted hover:bg-background hover:text-ink">
+            Tutorial
+          </NavLink>
           <button
             type="button"
             onClick={handleLogout}

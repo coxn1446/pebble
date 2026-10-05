@@ -1,4 +1,7 @@
 import React from 'react';
+import { FIELD_GLYPH_ID, FIELD_GLYPH_SRC, createFieldGlyphElement } from './fieldGlyphs';
+
+export { createFieldGlyphElement };
 
 const baseProps = {
   fill: 'none',
@@ -9,6 +12,15 @@ const baseProps = {
   viewBox: '0 0 24 24',
   'aria-hidden': true,
 };
+
+const FieldGlyph = ({ name, className = 'h-4 w-4' }) => (
+  <img
+    src={FIELD_GLYPH_SRC[name]}
+    alt=""
+    data-icon={FIELD_GLYPH_ID[name]}
+    className={`field-glyph object-contain ${className}`}
+  />
+);
 
 /** Brand-consistent line icons for nav and field-notes toolbar. */
 export const HomeIcon = ({ className = 'h-4 w-4' }) => (
@@ -29,10 +41,41 @@ export const ArrowDownRightIcon = ({ className = 'h-4 w-4' }) => (
   </svg>
 );
 
+export const MenuIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+);
+
+export const CloseIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M6 6 18 18M18 6 6 18" />
+  </svg>
+);
+
 export const LeafIcon = ({ className = 'h-4 w-4' }) => (
   <svg {...baseProps} className={className}>
     <path d="M5 13c0-5 4-9 11-9 0 7-4 11-11 11Z" />
     <path d="M5 13c3-1 6-4 8-8" />
+  </svg>
+);
+
+export const ExpandIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5" />
+  </svg>
+);
+
+export const CollapseIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M4 9h5V4M15 4v5h5M20 15h-5v5M9 20v-5H4" />
+  </svg>
+);
+
+export const RecenterIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
   </svg>
 );
 
@@ -159,59 +202,155 @@ export const AttachmentIcon = ({ className = 'h-4 w-4' }) => (
 );
 
 export const BiologyIcon = ({ className = 'h-4 w-4' }) => (
-  <svg {...baseProps} className={className}>
-    <path d="M12 3v18M7 8c3 2 7 2 10 0M7 16c3-2 7-2 10 0" />
-    <ellipse cx="12" cy="12" rx="4" ry="8" />
-  </svg>
+  <FieldGlyph name="Biology" className={className} />
 );
 
 export const PhysicsIcon = ({ className = 'h-4 w-4' }) => (
-  <svg {...baseProps} className={className}>
-    <circle cx="12" cy="12" r="2" />
-    <ellipse cx="12" cy="12" rx="9" ry="4" />
-    <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)" />
-    <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)" />
-  </svg>
+  <FieldGlyph name="Physics" className={className} />
 );
 
 export const ChemistryIcon = ({ className = 'h-4 w-4' }) => (
-  <svg {...baseProps} className={className}>
-    <path d="M9 3h6M10 3v5l-5 9a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-9V3" />
-  </svg>
+  <FieldGlyph name="Chemistry" className={className} />
 );
 
 export const EarthScienceIcon = ({ className = 'h-4 w-4' }) => (
-  <svg {...baseProps} className={className}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-  </svg>
+  <FieldGlyph name="Earth Science" className={className} />
 );
 
 export const AstronomyIcon = ({ className = 'h-4 w-4' }) => (
-  <svg {...baseProps} className={className}>
-    <path d="m12 3 1.8 4.8L19 9.5l-4 3.2L16.2 18 12 15.4 7.8 18l1.2-5.3-4-3.2 5.2-1.7L12 3Z" />
-  </svg>
+  <FieldGlyph name="Astronomy" className={className} />
 );
 
 export const MathematicsIcon = ({ className = 'h-4 w-4' }) => (
-  <svg {...baseProps} className={className}>
-    <path d="M5 8h6M8 5v6M14 7l5 5M19 7l-5 5M5 16h6M14 16h5" />
-  </svg>
+  <FieldGlyph name="Mathematics" className={className} />
 );
 
 export const ComputerScienceIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Computer Science" className={className} />
+);
+
+export const AgriculturalScienceIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Agricultural Science" className={className} />
+);
+
+export const ClimateScienceIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Climate Science" className={className} />
+);
+
+export const EngineeringIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Engineering & Technology" className={className} />
+);
+
+export const EnvironmentalScienceIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Environmental Science" className={className} />
+);
+
+export const HealthMedicineIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Health & Medicine" className={className} />
+);
+
+export const MarineScienceIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Marine Science" className={className} />
+);
+
+export const MaterialsScienceIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Materials Science" className={className} />
+);
+
+export const MicrobiologyIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Microbiology" className={className} />
+);
+
+export const NeuroscienceIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Neuroscience" className={className} />
+);
+
+export const PaleontologyIcon = ({ className = 'h-4 w-4' }) => (
+  <FieldGlyph name="Paleontology" className={className} />
+);
+
+export const SunIcon = ({ className = 'h-4 w-4' }) => (
   <svg {...baseProps} className={className}>
-    <rect x="3" y="5" width="18" height="12" rx="2" />
-    <path d="M8 21h8M12 17v4" />
+    <circle cx="12" cy="12" r="3.5" />
+    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+  </svg>
+);
+
+export const CloudIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M7 17h10a4 4 0 0 0 .4-8 5 5 0 0 0-9.6-1.2A3.5 3.5 0 0 0 7 17Z" />
+  </svg>
+);
+
+export const RainIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M7 14h10a3.5 3.5 0 0 0 .3-7 4.5 4.5 0 0 0-8.6-1A3 3 0 0 0 7 14Z" />
+    <path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3" />
+  </svg>
+);
+
+export const SnowIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M12 3v18M5 7.5l14 9M19 7.5l-14 9" />
+  </svg>
+);
+
+export const WindIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M4 8h11a2 2 0 1 0-2-2M4 12h14a2 2 0 1 1-2 2M4 16h8" />
+  </svg>
+);
+
+export const PartlyCloudyIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <circle cx="8" cy="8" r="2.5" />
+    <path d="M8 4v1.2M8 10.8V12M4.5 8H5.7M10.3 8H11.5M5.4 5.4l.8.8M10 9.8l.8.8" />
+    <path d="M9 17h8a3 3 0 0 0 .2-6 3.8 3.8 0 0 0-6.4-.6A2.6 2.6 0 0 0 9 17Z" />
+  </svg>
+);
+
+export const ThunderIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M7 13h9a3 3 0 0 0 .2-6 4 4 0 0 0-7.4-.8A2.6 2.6 0 0 0 7 13Z" />
+    <path d="M13 13.5 10.5 18h3L11 21" />
+  </svg>
+);
+
+export const SleetIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M7 13h10a3 3 0 0 0 .2-6 4 4 0 0 0-7.6-.8A2.6 2.6 0 0 0 7 13Z" />
+    <path d="M9 16.5 8 19M13 16.5 12 19" />
+    <path d="M16 16.2v.2M16.8 17.4h.2M15.2 17.4h.2M16 18.6v.2" />
+  </svg>
+);
+
+export const FogIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M4 8h16M4 12h16M4 16h16" />
+  </svg>
+);
+
+export const IceIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M12 3v18M4 8l16 8M20 8 4 16M8 5l4 4 4-4M8 19l4-4 4 4" />
+  </svg>
+);
+
+export const SevereIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M12 3 4 19h16L12 3Z" />
+    <path d="M12 10v4M12 16.5v.5" />
+  </svg>
+);
+
+export const MoonIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M16 14.5A6.5 6.5 0 0 1 9.2 5 6.5 6.5 0 1 0 16 14.5Z" />
   </svg>
 );
 
 export const PsychologyIcon = ({ className = 'h-4 w-4' }) => (
-  <svg {...baseProps} className={className}>
-    <path d="M12 3a6 6 0 0 0-4 10.5V21h3v-3h2v3h3v-7.5A6 6 0 0 0 12 3Z" />
-    <circle cx="10" cy="10" r="0.8" fill="currentColor" stroke="none" />
-    <circle cx="14" cy="10" r="0.8" fill="currentColor" stroke="none" />
-  </svg>
+  <FieldGlyph name="Psychology" className={className} />
 );
 
 export const ClipboardIcon = ({ className = 'h-4 w-4' }) => (
@@ -265,6 +404,126 @@ export const EyeOffIcon = ({ className = 'h-4 w-4' }) => (
   </svg>
 );
 
+/** Filled cartoon penguin. Body, belly, and beak use black, white, and sandstone. */
+const PENGUIN_SHAPES = [
+  ['ellipse', { cx: '12', cy: '13.2', rx: '7.2', ry: '8.2', fill: '#000000' }],
+  ['ellipse', { cx: '12', cy: '15.6', rx: '4.1', ry: '4.4', fill: '#FFFFFF' }],
+  ['circle', { cx: '9.5', cy: '10.1', r: '1.15', fill: '#FFFFFF' }],
+  ['circle', { cx: '14.5', cy: '10.1', r: '1.15', fill: '#FFFFFF' }],
+  ['circle', { cx: '9.8', cy: '10.3', r: '0.42', fill: '#000000' }],
+  ['circle', { cx: '14.8', cy: '10.3', r: '0.42', fill: '#000000' }],
+  ['path', { d: 'M10.5 12.3h3L12 14.2Z', fill: '#D6B37A' }],
+  ['ellipse', { cx: '8.3', cy: '21.1', rx: '2', ry: '0.85', fill: '#D6B37A' }],
+  ['ellipse', { cx: '15.7', cy: '21.1', rx: '2', ry: '0.85', fill: '#D6B37A' }],
+];
+
+export const PenguinIcon = ({ className = 'h-6 w-6' }) => (
+  <svg viewBox="0 0 24 24" className={className} data-icon="penguin" aria-hidden="true">
+    {PENGUIN_SHAPES.map(([tag, attrs]) => {
+      const Tag = tag;
+      return <Tag key={`${tag}-${attrs.cx || ''}-${attrs.cy || ''}-${attrs.d || ''}`} {...attrs} />;
+    })}
+  </svg>
+);
+
+export function createPenguinAvatarElement() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('data-icon', 'penguin');
+  svg.setAttribute('aria-hidden', 'true');
+  PENGUIN_SHAPES.forEach(([tag, attrs]) => {
+    const shape = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([name, value]) => shape.setAttribute(name, value));
+    svg.append(shape);
+  });
+  return svg;
+}
+
+const sketchProps = {
+  ...baseProps,
+  viewBox: '0 0 48 48',
+  strokeWidth: 1.6,
+};
+
+/** Line icons from the How it Works comparison slide. */
+export const SketchBookIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-book">
+    <path d="M16 10h18a2 2 0 0 1 2 2v24a2 2 0 0 1-2 2H16" />
+    <path d="M16 10a4 4 0 0 0-4 4v20a4 4 0 0 0 4 4" />
+    <path d="M16 10v28" />
+    <path d="M20 18h10M20 24h10M20 30h7" />
+  </svg>
+);
+
+export const SketchGlobeIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-globe">
+    <circle cx="24" cy="24" r="14" />
+    <ellipse cx="24" cy="24" rx="6.5" ry="14" />
+    <path d="M10 24h28M12.5 17.5h23M12.5 30.5h23" />
+  </svg>
+);
+
+export const SketchClipboardIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-clipboard">
+    <rect x="14" y="10" width="20" height="28" rx="2" />
+    <path d="M20 8h8a1 1 0 0 1 1 1v3H19V9a1 1 0 0 1 1-1Z" />
+    <path d="m18 20 2 2 3.5-3.5M18 28l2 2 3.5-3.5" />
+    <path d="M26 21h6M26 29h6" />
+  </svg>
+);
+
+export const SketchClockIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-clock">
+    <circle cx="24" cy="24" r="14" />
+    <path d="M24 16v9l6 4" />
+  </svg>
+);
+
+export const SketchMicroscopeIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-microscope">
+    <path d="M18 8h6l2 6h-10l2-6Z" />
+    <path d="M21 14v6" />
+    <circle cx="21" cy="23" r="4" />
+    <path d="M25 22h8" />
+    <path d="M30 18v12" />
+    <path d="M14 30h18" />
+    <path d="M16 30v3h14" />
+    <path d="M12 38h22" />
+    <path d="M18 38v-5" />
+  </svg>
+);
+
+export const SketchToolsIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-tools">
+    <path d="M16 10h4l1 22-3 6-3-6 1-22Z" />
+    <path d="M16 14h4" />
+    <path d="M14 34 34 14" />
+    <path d="M30 12h6v4" />
+    <path d="M32 16v16" />
+    <path d="M29 20h6M29 25h6M29 30h6" />
+  </svg>
+);
+
+export const SketchDiscussionIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-discussion">
+    <circle cx="17" cy="22" r="4" />
+    <circle cx="31" cy="22" r="4" />
+    <path d="M11 34c.8-4.5 3-7 6-7s5.2 2.5 6 7" />
+    <path d="M25 34c.8-4.5 3-7 6-7s5.2 2.5 6 7" />
+    <path d="M8 12h9v5H11l-3 2v-7Z" />
+    <path d="M31 10h9v5h-6l-3 2v-7Z" />
+  </svg>
+);
+
+export const SketchChartIcon = ({ className = 'h-10 w-10' }) => (
+  <svg {...sketchProps} className={className} data-icon="sketch-chart">
+    <path d="M10 38h28" />
+    <path d="M16 38V26M24 38V18M32 38V23" />
+    <path d="M14 30l8-8 6 3 8-9" />
+    <path d="M32 14h6v6" />
+  </svg>
+);
+
 export const CheckIcon = ({ className = 'h-4 w-4' }) => (
   <svg {...baseProps} className={className}>
     <path d="m5 12.5 4.5 4.5L19 7.5" />
@@ -286,13 +545,23 @@ export const ChartIcon = ({ className = 'h-4 w-4' }) => (
 );
 
 const FIELD_ICONS = {
-  Biology: BiologyIcon,
-  Physics: PhysicsIcon,
-  Chemistry: ChemistryIcon,
-  'Earth Science': EarthScienceIcon,
+  'Agricultural Science': AgriculturalScienceIcon,
   Astronomy: AstronomyIcon,
-  Mathematics: MathematicsIcon,
+  Biology: BiologyIcon,
+  Chemistry: ChemistryIcon,
+  'Climate Science': ClimateScienceIcon,
   'Computer Science': ComputerScienceIcon,
+  'Earth Science': EarthScienceIcon,
+  'Engineering & Technology': EngineeringIcon,
+  'Environmental Science': EnvironmentalScienceIcon,
+  'Health & Medicine': HealthMedicineIcon,
+  'Marine Science': MarineScienceIcon,
+  'Materials Science': MaterialsScienceIcon,
+  Mathematics: MathematicsIcon,
+  Microbiology: MicrobiologyIcon,
+  Neuroscience: NeuroscienceIcon,
+  Paleontology: PaleontologyIcon,
+  Physics: PhysicsIcon,
   Psychology: PsychologyIcon,
 };
 

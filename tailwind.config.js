@@ -25,10 +25,10 @@ module.exports = {
       },
 
       fontFamily: {
-        // Body / UI — Avenir (system on Apple; add licensed webfonts in public/fonts when needed)
+        // BODY FONT — paragraphs and secondary nav. Keep in sync with --font-sans in src/index.css.
         sans: ['Avenir', 'Avenir Next', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        // Headings — Fraunces (Google Fonts)
-        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+        // HEADER FONT — titles, wordmark, captions. Keep in sync with --font-display in src/index.css.
+        display: ['Ovo', 'ui-serif', 'Georgia', 'serif'],
       },
 
       borderRadius: {

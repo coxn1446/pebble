@@ -1,6 +1,7 @@
 import {
   addPebbleToCollection,
   createCollection,
+  deleteCollection,
   fetchCollections,
   inviteToCollection,
 } from '../helpers/collectionHelpers';
@@ -65,5 +66,18 @@ describe('collectionHelpers', () => {
     await expect(addPebbleToCollection(1, 10)).rejects.toThrow(
       'Not allowed to add pebbles to this collection'
     );
+  });
+
+  test('deleteCollection rejects a non-owner', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Only the owner can delete this collection' }),
+    });
+    await expect(deleteCollection(4)).rejects.toThrow('Only the owner can delete this collection');
+    expect(global.fetch).toHaveBeenCalledWith('/api/collections/4', {
+      method: 'DELETE',
+      credentials: 'include',
+    });
   });
 });

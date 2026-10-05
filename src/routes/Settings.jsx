@@ -33,6 +33,7 @@ const Settings = () => {
         setPreviewUser(user);
         setForm({
           displayName: user.display_name || '',
+          blurb: user.blurb || '',
           username: user.username || '',
           profession: user.profession || '',
           fieldOfStudy: user.field_of_study || '',
@@ -78,6 +79,7 @@ const Settings = () => {
         try {
           const user = await updateMe({
             displayName: form.displayName,
+            blurb: form.blurb,
             username: form.username,
             profession: form.profession,
             fieldOfStudy: form.fieldOfStudy,
@@ -128,7 +130,6 @@ const Settings = () => {
         <UserAvatar
           user={avatarPreview}
           className="h-16 w-16 rounded-full"
-          emojiClassName="text-3xl"
         />
         <div className="space-y-2">
           <label className="block">
@@ -161,11 +162,9 @@ const Settings = () => {
               className="text-xs text-muted hover:text-ink"
               onClick={() => setForm({ ...form, profilePicUrl: null })}
             >
-              Use default animal avatar
+              Use penguin avatar
             </button>
-          ) : (
-            <p className="text-xs text-muted">Default is a color + animal emoji until you upload a photo.</p>
-          )}
+          ) : null}
         </div>
       </div>
       <label className="block">
@@ -174,6 +173,16 @@ const Settings = () => {
           value={form.displayName}
           onChange={(e) => setForm({ ...form, displayName: e.target.value })}
           className={inputClass}
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1.5 block text-sm text-muted">Blurb</span>
+        <textarea
+          value={form.blurb}
+          onChange={(e) => setForm({ ...form, blurb: e.target.value })}
+          maxLength={500}
+          rows={4}
+          className="w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-accent"
         />
       </label>
       <label className="block">

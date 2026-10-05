@@ -1,23 +1,14 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { createEditor, Editor, Transforms } from 'slate';
+import { createEditor, Editor, Element as SlateElement, Transforms } from 'slate';
 import { Editable, Slate, useSlate, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
-import toast from 'react-hot-toast';
-import { uploadFile } from '../../helpers/uploadHelpers';
 import {
   EMPTY_FIELD_NOTES,
+  FIELD_NOTES_WORD_CAP,
   MEDIA_VOID_TYPES,
-  createMediaNode,
+  countFieldNoteWords,
   normalizeFieldNotes,
 } from '../../helpers/fieldNotesHelpers';
-import {
-  AttachmentIcon,
-  AudioIcon,
-  DataIcon,
-  IconLabel,
-  PhotoIcon,
-  VideoIcon,
-} from '../Icons/Icons';
 
 const withMedia = (editor) => {
   const { isVoid } = editor;
@@ -54,23 +45,60 @@ const MarkButton = ({ format, label }) => {
   );
 };
 
+const LIST_TYPES = ['bulleted-list', 'numbered-list'];
+
+const isBlockActive = (editor, format) => {
+  const { selection } = editor;
+  if (!selection) return false;
+  const [match] = Editor.nodes(editor, {
+    at: Editor.unhangRange(editor, selection),
+    match: (node) =>
+      !Editor.isEditor(node) && SlateElement.isElement(node) && node.type === format,
+  });
+  return Boolean(match);
+};
+
+const toggleList = (editor, format) => {
+  const active = isBlockActive(editor, format);
+  Transforms.unwrapNodes(editor, {
+    match: (node) =>
+      !Editor.isEditor(node) && SlateElement.isElement(node) && LIST_TYPES.includes(node.type),
+    split: true,
+  });
+  Transforms.setNodes(editor, {
+    type: active ? 'paragraph' : 'list-item',
+  });
+  if (!active) {
+    Transforms.wrapNodes(editor, { type: format, children: [] });
+  }
+};
+
+const ListButton = ({ format, label }) => {
+  const editor = useSlate();
+  const active = isBlockActive(editor, format);
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        toggleList(editor, format);
+      }}
+      className={`rounded-xl px-2 py-1 text-xs ${
+        active ? 'bg-accent text-white' : 'border border-border bg-surface text-ink'
+      }`}
+    >
+      {label}
+    </button>
+  );
+};
+
 const insertHeading = (editor) => {
   Transforms.insertNodes(editor, {
     type: 'heading',
     children: [{ text: 'Heading' }],
   });
 };
-
-const MediaToolbarButton = ({ label, icon, disabled, onClick }) => (
-  <button
-    type="button"
-    disabled={disabled}
-    onClick={onClick}
-    className="rounded-xl border border-border bg-surface px-2 py-1 text-xs text-ink disabled:opacity-60"
-  >
-    <IconLabel icon={icon} label={label} />
-  </button>
-);
 
 const Element = ({ attributes, children, element }) => {
   switch (element.type) {
@@ -80,6 +108,20 @@ const Element = ({ attributes, children, element }) => {
           {children}
         </h3>
       );
+    case 'bulleted-list':
+      return (
+        <ul {...attributes} className="mb-2 list-disc pl-5 text-sm text-ink">
+          {children}
+        </ul>
+      );
+    case 'numbered-list':
+      return (
+        <ol {...attributes} className="mb-2 list-decimal pl-5 text-sm text-ink">
+          {children}
+        </ol>
+      );
+    case 'list-item':
+      return <li {...attributes}>{children}</li>;
     case 'image':
       return (
         <div {...attributes} contentEditable={false} className="my-3">
@@ -139,49 +181,32 @@ const Leaf = ({ attributes, children, leaf }) => {
   return <span {...attributes}>{content}</span>;
 };
 
-const FieldNotesEditor = ({ value, onChange }) => {
+const FieldNotesEditor = ({ value, onChange, wordCap = FIELD_NOTES_WORD_CAP }) => {
   const editor = useMemo(() => withMedia(withHistory(withReact(createEditor()))), []);
-  const [uploading, setUploading] = useState(false);
   const initial = normalizeFieldNotes(value);
+  const [wordCount, setWordCount] = useState(() => countFieldNoteWords(initial));
+  const [writing, setWriting] = useState(() => countFieldNoteWords(initial) > 0);
 
   const renderElement = useCallback((props) => <Element {...props} />, []);
   const renderLeaf = useCallback((props) => <Leaf {...props} />, []);
-
-  const handleUpload = async (mediaType, accept) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = accept;
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      setUploading(true);
-      try {
-        const media = await uploadFile(file, mediaType);
-        const node = createMediaNode({
-          mediaType: media.media_type || mediaType,
-          url: media.media_url,
-          mediaId: media.media_id,
-          caption: media.filename || '',
-        });
-        Transforms.insertNodes(editor, node);
-        Transforms.insertNodes(editor, { type: 'paragraph', children: [{ text: '' }] });
-      } catch (err) {
-        toast.error(err.message || 'Upload failed');
-      } finally {
-        setUploading(false);
-      }
-    };
-    input.click();
-  };
 
   return (
     <div className="rounded-2xl border border-border bg-surface">
       <Slate
         editor={editor}
         initialValue={initial.length ? initial : EMPTY_FIELD_NOTES}
-        onChange={(next) => onChange(next)}
+        onChange={(next) => {
+          const count = countFieldNoteWords(next);
+          if (count > wordCap) {
+            editor.undo();
+            return;
+          }
+          setWordCount(count);
+          if (count > 0) setWriting(true);
+          onChange(next);
+        }}
       >
-        <div className="flex flex-wrap gap-2 border-b border-border px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
           <MarkButton format="bold" label="Bold" />
           <MarkButton format="italic" label="Italic" />
           <button
@@ -194,43 +219,24 @@ const FieldNotesEditor = ({ value, onChange }) => {
           >
             Heading
           </button>
-          <MediaToolbarButton
-            label="Photo"
-            icon={PhotoIcon}
-            disabled={uploading}
-            onClick={() => handleUpload('image', 'image/*')}
-          />
-          <MediaToolbarButton
-            label="Video"
-            icon={VideoIcon}
-            disabled={uploading}
-            onClick={() => handleUpload('video', 'video/*')}
-          />
-          <MediaToolbarButton
-            label="Audio"
-            icon={AudioIcon}
-            disabled={uploading}
-            onClick={() => handleUpload('audio', 'audio/*')}
-          />
-          <MediaToolbarButton
-            label="Data"
-            icon={DataIcon}
-            disabled={uploading}
-            onClick={() => handleUpload('data', '.json,.csv,.tsv,.txt')}
-          />
-          <MediaToolbarButton
-            label="Attachment"
-            icon={AttachmentIcon}
-            disabled={uploading}
-            onClick={() => handleUpload('attachment', '*/*')}
+          <ListButton format="bulleted-list" label="Bulleted list" />
+          <ListButton format="numbered-list" label="Numbered list" />
+          <span className="ml-auto text-xs text-muted" data-testid="field-notes-count">
+            {wordCount} / {wordCap}
+          </span>
+        </div>
+        <div
+          data-testid="field-notes-body"
+          className={writing ? 'min-h-64' : 'min-h-24'}
+          onFocus={() => setWriting(true)}
+        >
+          <Editable
+            className="min-h-full px-3 py-3 outline-none"
+            renderElement={renderElement}
+            renderLeaf={renderLeaf}
+            placeholder="Write field notes…"
           />
         </div>
-        <Editable
-          className="min-h-40 px-3 py-3 outline-none"
-          renderElement={renderElement}
-          renderLeaf={renderLeaf}
-          placeholder="Write field notes…"
-        />
       </Slate>
     </div>
   );

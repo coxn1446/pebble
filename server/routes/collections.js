@@ -30,6 +30,7 @@ module.exports = () => {
         name: body.name,
         isPrivate: body.isPrivate,
         isCollaborative: body.isCollaborative,
+        coverImageUrl: body.coverImageUrl,
       });
       return res.status(201).json({ collection });
     } catch (err) {
@@ -55,6 +56,7 @@ module.exports = () => {
         name: body.name,
         isPrivate: body.isPrivate,
         isCollaborative: body.isCollaborative,
+        coverImageUrl: body.coverImageUrl,
       });
       return res.json({ collection });
     } catch (err) {

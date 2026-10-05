@@ -12,8 +12,10 @@ jest.mock('react-router-dom', () => ({
 }));
 
 jest.mock('../helpers/pebbleHelpers', () => ({
+  ...jest.requireActual('../helpers/pebbleHelpers'),
   fetchFeed: jest.fn(),
   searchPebbles: jest.fn(),
+  fetchPebble: jest.fn(),
 }));
 
 jest.mock('../helpers/userHelpers', () => ({
@@ -29,9 +31,10 @@ jest.mock('../helpers/searchHelpers', () => ({
 }));
 
 jest.mock('../components/Map/PebbleMap', () => {
-  const MockPebbleMap = ({ pebbles, onSelectGroup, onViewportChange, focusTarget }) => (
+  const MockPebbleMap = ({ pebbles, onSelectGroup, onViewportChange, focusTarget, resetSignal }) => (
     <div data-testid="pebble-map">
       <span>{`pins:${pebbles.length}`}</span>
+      <span data-testid="map-reset">{resetSignal || 0}</span>
       <span data-testid="map-focus">
         {focusTarget ? `${focusTarget.lat},${focusTarget.lng}` : 'none'}
       </span>
@@ -67,12 +70,12 @@ jest.mock('../components/Map/PebbleMap', () => {
   return MockPebbleMap;
 });
 
-import { fetchFeed, searchPebbles } from '../helpers/pebbleHelpers';
+import { fetchFeed, fetchPebble, searchPebbles } from '../helpers/pebbleHelpers';
 import { fetchMapUsers } from '../helpers/userHelpers';
 
-const renderMapRoute = () =>
+const renderMapRoute = (entry = '/') =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <Map />
     </MemoryRouter>
   );
@@ -259,5 +262,198 @@ describe('Map route', () => {
     await user.click(screen.getByRole('button', { name: 'Select group' }));
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(screen.queryByText(/pebbles in this area/i)).not.toBeInTheDocument();
+  });
+
+  test('expand hides the feed and restore brings it back', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([]);
+    renderMapRoute();
+    expect(await screen.findByTestId('map-layout')).toHaveAttribute('data-layout', 'split');
+    await user.click(screen.getByRole('button', { name: 'Expand map' }));
+    expect(screen.getByTestId('map-layout')).toHaveAttribute('data-layout', 'expanded');
+    expect(screen.queryByTestId('map-feed-panel')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restore split' }));
+    expect(screen.getByTestId('map-layout')).toHaveAttribute('data-layout', 'split');
+    expect(screen.getByTestId('map-feed-panel')).toBeInTheDocument();
+  });
+
+  test('recenter bumps the map reset signal', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([]);
+    renderMapRoute();
+    await screen.findByTestId('pebble-map');
+    expect(screen.getByTestId('map-reset')).toHaveTextContent('0');
+    await user.click(screen.getByRole('button', { name: 'Recenter map' }));
+    expect(screen.getByTestId('map-reset')).toHaveTextContent('1');
+  });
+
+  test('expanded pin opens a preview and does not navigate', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([
+      {
+        pebble_id: 1,
+        title: 'Portland',
+        description: 'Harbor notes',
+        hero_image_url: 'https://example.com/harbor.jpg',
+        place_lat: 43.65,
+        place_lng: -70.25,
+        phenomena: [{ phenomenon_id: 4, name: 'tides' }],
+        like_count: 2,
+      },
+    ]);
+    renderMapRoute();
+    await screen.findByText('Portland');
+    await user.click(screen.getByRole('button', { name: 'Expand map' }));
+    await user.click(screen.getByRole('button', { name: 'Select single' }));
+    expect(mockNavigate).not.toHaveBeenCalled();
+    const preview = await screen.findByTestId('map-pin-preview');
+    expect(preview).toHaveTextContent('Portland');
+    expect(preview).toHaveTextContent('Harbor notes');
+    expect(preview).toHaveTextContent('tides');
+    expect(screen.getByTestId('map-pin-preview-photo')).toHaveAttribute(
+      'src',
+      'https://example.com/harbor.jpg'
+    );
+  });
+
+  test('Mine requests only the signed-in user’s pebbles', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([]);
+    renderMapRoute();
+    await screen.findByRole('button', { name: 'Mine' });
+    await user.click(screen.getByRole('button', { name: 'Mine' }));
+    await waitFor(() => {
+      expect(searchPebbles).toHaveBeenCalledWith(expect.objectContaining({ mine: true }));
+    });
+    expect(fetchMapUsers).not.toHaveBeenCalledTimes(2);
+  });
+
+  test('Community favorites is sent with search', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([]);
+    renderMapRoute();
+    await user.click(await screen.findByRole('button', { name: /Advanced search/i }));
+    expect(screen.getByText('Topic')).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Community favorites' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await waitFor(() => {
+      expect(searchPebbles).toHaveBeenCalledWith(expect.objectContaining({ favorites: true }));
+    });
+  });
+
+  test('says when matches are not pinned', async () => {
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([
+      { pebble_id: 9, title: 'Fish Islands', place_name: 'Fish Islands', like_count: 0 },
+    ]);
+    renderMapRoute();
+    await screen.findByTestId('map-feed-panel');
+    const { fetchSearchSuggestions } = require('../helpers/searchHelpers');
+    fetchSearchSuggestions.mockResolvedValue([
+      { type: 'place', id: 'p', label: 'Fish Islands', value: 'Fish Islands' },
+    ]);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/Search people or places/i), 'fish');
+    await user.click(await screen.findByText('Fish Islands'));
+    expect(await screen.findByText('Nothing in this view is pinned to the map.')).toBeInTheDocument();
+  });
+
+  test('media checkboxes are sent with search', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([]);
+    renderMapRoute();
+    await user.click(await screen.findByRole('button', { name: /Advanced search/i }));
+    await user.click(screen.getByRole('checkbox', { name: 'Has photo' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Has video' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Has data' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await waitFor(() => {
+      expect(searchPebbles).toHaveBeenCalledWith(
+        expect.objectContaining({ hasPhoto: true, hasVideo: true, hasData: true })
+      );
+    });
+  });
+
+  test('Biology plus Has photo lists a match outside the camera and flies to it', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([
+      {
+        pebble_id: 1,
+        title: 'In view',
+        place_lat: 43.65,
+        place_lng: -70.25,
+        like_count: 0,
+      },
+    ]);
+    searchPebbles.mockResolvedValue([
+      {
+        pebble_id: 8,
+        title: 'Antarctic biology',
+        place_lat: -75.2,
+        place_lng: -0.1,
+        fields: [{ field_id: 1, name: 'Biology' }],
+        like_count: 0,
+      },
+    ]);
+    renderMapRoute();
+    expect(await screen.findByText('In view')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Set viewport' }));
+    await user.click(screen.getByRole('button', { name: /Advanced search/i }));
+    await user.selectOptions(screen.getByRole('combobox'), '1');
+    await user.click(screen.getByRole('checkbox', { name: 'Has photo' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    expect(await screen.findByText('Antarctic biology')).toBeInTheDocument();
+    expect(screen.queryByText('No pebbles in this view.')).not.toBeInTheDocument();
+    expect(screen.getByTestId('map-focus')).toHaveTextContent('-75.2,-0.1');
+    expect(searchPebbles).toHaveBeenCalledWith(
+      expect.objectContaining({ fieldId: '1', hasPhoto: true })
+    );
+  });
+
+  test('a search with no matches says nothing matched', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([
+      {
+        pebble_id: 1,
+        title: 'In view',
+        place_lat: 43.65,
+        place_lng: -70.25,
+        like_count: 0,
+      },
+    ]);
+    searchPebbles.mockResolvedValue([]);
+    renderMapRoute();
+    expect(await screen.findByText('In view')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Set viewport' }));
+    await user.click(screen.getByRole('button', { name: /Advanced search/i }));
+    await user.click(screen.getByRole('checkbox', { name: 'Has photo' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    expect(await screen.findByText('Nothing matched.')).toBeInTheDocument();
+    expect(screen.queryByText('No pebbles in this view.')).not.toBeInTheDocument();
+    expect(screen.queryByText('In view')).not.toBeInTheDocument();
+  });
+
+  test('a published pebble opens the expanded map preview', async () => {
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([]);
+    fetchPebble.mockResolvedValue({
+      pebble_id: 8,
+      title: 'Shelf ice',
+      description: 'At a glance',
+      hero_image_url: 'https://example.com/ice.jpg',
+      place_lat: 12,
+      place_lng: 34,
+      phenomena: [{ phenomenon_id: 1, name: 'ice' }],
+    });
+    renderMapRoute('/?mine=1&pebble=8');
+    expect(await screen.findByTestId('map-pin-preview')).toHaveTextContent('Shelf ice');
+    expect(screen.getByTestId('map-layout')).toHaveAttribute('data-layout', 'expanded');
+    expect(screen.getByTestId('map-focus')).toHaveTextContent('12,34');
+    await waitFor(() => {
+      expect(searchPebbles).toHaveBeenCalledWith(expect.objectContaining({ mine: true }));
+    });
   });
 });

@@ -72,6 +72,29 @@ export const addressPartsFromComponents = (components) => {
   return { placeLocality, placeAdminArea, placeCountry };
 };
 
+/** Classic Geocoder result → place shape. Coordinates stay even when the name is empty. */
+export const placeFromGeocoderResult = (result, lat, lng) => {
+  if (!result) {
+    return {
+      placeId: null,
+      placeName: '',
+      placeLat: lat,
+      placeLng: lng,
+      placeLocality: null,
+      placeAdminArea: null,
+      placeCountry: null,
+    };
+  }
+  const parts = addressPartsFromComponents(result.address_components);
+  return {
+    placeId: result.place_id || null,
+    placeName: result.formatted_address || '',
+    placeLat: lat,
+    placeLng: lng,
+    ...parts,
+  };
+};
+
 /** Normalize a Places API (New) Place into Pebble's place shape. */
 export const placeFromNewPlace = (place) => {
   if (!place) return emptyPlace();

@@ -42,7 +42,7 @@ const UserListModal = ({ username, mode, onClose }) => {
                 onClick={onClose}
                 className="flex items-center gap-3 rounded-2xl border border-border px-3 py-2 hover:border-pebble"
               >
-                <UserAvatar user={user} className="h-9 w-9 rounded-full" emojiClassName="text-base" />
+                <UserAvatar user={user} className="h-9 w-9 rounded-full" />
                 <span>
                   <span className="block text-sm font-medium text-ink">
                     {user.display_name || user.username}

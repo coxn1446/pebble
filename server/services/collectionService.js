@@ -45,6 +45,7 @@ const create = async (ownerId, data) => {
     data.name.trim(),
     Boolean(data.isPrivate),
     Boolean(data.isCollaborative),
+    data.coverImageUrl || null,
   ]);
   return rows[0];
 };
@@ -83,6 +84,7 @@ const update = async (collectionId, ownerId, data) => {
     typeof data.isPrivate === 'boolean' ? data.isPrivate : null,
     typeof data.isCollaborative === 'boolean' ? data.isCollaborative : null,
     ownerId,
+    data.coverImageUrl || null,
   ]);
   if (!rows[0]) {
     const err = new Error('Collection not found');
@@ -94,6 +96,12 @@ const update = async (collectionId, ownerId, data) => {
 
 const remove = async (collectionId, ownerId) => {
   requireDb();
+  const collection = await getCollectionOrThrow(collectionId);
+  if (Number(collection.owner_id) !== Number(ownerId)) {
+    const err = new Error('Only the owner can delete this collection');
+    err.status = 403;
+    throw err;
+  }
   const result = await query(collectionQueries.remove, [collectionId, ownerId]);
   if (result.rowCount === 0) {
     const err = new Error('Collection not found');

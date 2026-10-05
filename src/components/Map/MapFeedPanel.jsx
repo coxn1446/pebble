@@ -17,6 +17,10 @@ const MapFeedPanel = ({
   onRemoveFilterChip,
   feedPebbles,
   feedLoading,
+  emptyMessage = 'No pebbles in this view.',
+  caption = 'In this view, newest first',
+  scope = 'everyone',
+  onScopeChange,
 }) => (
   <div
     data-testid="map-feed-panel"
@@ -30,15 +34,39 @@ const MapFeedPanel = ({
           </span>
           <div>
             <h1 className="font-display text-2xl font-semibold text-ink">Map</h1>
-            <p className="text-sm text-muted">Explore pebbles near this view.</p>
+            <p className="text-sm text-muted">{caption}</p>
           </div>
         </div>
-        <Link
-          to="/pebbles/new"
-          className="rounded-2xl bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-        >
-          New pebble
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-2xl border border-border p-0.5" role="group" aria-label="Whose pebbles">
+            <button
+              type="button"
+              aria-pressed={scope === 'everyone'}
+              onClick={() => onScopeChange?.('everyone')}
+              className={`rounded-2xl px-2.5 py-1.5 text-sm ${
+                scope === 'everyone' ? 'bg-accent text-white' : 'text-ink'
+              }`}
+            >
+              Everyone
+            </button>
+            <button
+              type="button"
+              aria-pressed={scope === 'mine'}
+              onClick={() => onScopeChange?.('mine')}
+              className={`rounded-2xl px-2.5 py-1.5 text-sm ${
+                scope === 'mine' ? 'bg-accent text-white' : 'text-ink'
+              }`}
+            >
+              Mine
+            </button>
+          </div>
+          <Link
+            to="/pebbles/new"
+            className="rounded-2xl bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          >
+            New pebble
+          </Link>
+        </div>
       </div>
       <MapSearchInput
         value={queryDraft}
@@ -71,9 +99,7 @@ const MapFeedPanel = ({
       {feedLoading ? (
         <p className="px-4 py-4 text-sm text-muted">Loading…</p>
       ) : feedPebbles.length === 0 ? (
-        <p className="px-4 py-4 text-sm text-muted">
-          No pebbles in this map view. Pan the globe or clear filters to see more.
-        </p>
+        <p className="px-4 py-4 text-sm text-muted">{emptyMessage}</p>
       ) : (
         feedPebbles.map((pebble) => (
           <PebbleCard key={pebble.pebble_id} pebble={pebble} />

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
   place_admin_area VARCHAR(255),
   place_country VARCHAR(255),
   profile_pic_url TEXT,
+  blurb VARCHAR(500),
   content_searchable BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -60,6 +61,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS place_admin_area VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS place_country VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS content_searchable BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_pic_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS blurb VARCHAR(500);
 ALTER TABLE users DROP COLUMN IF EXISTS is_moderator;
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_provider_uidx
@@ -76,9 +78,16 @@ CREATE TABLE IF NOT EXISTS phenomena (
   phenomenon_id SERIAL PRIMARY KEY,
   field_id INTEGER NOT NULL REFERENCES fields (field_id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
+  offered BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (field_id, name)
 );
+
+ALTER TABLE phenomena ADD COLUMN IF NOT EXISTS offered BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE INDEX IF NOT EXISTS phenomena_offered_field_idx
+  ON phenomena (field_id)
+  WHERE offered;
 
 CREATE TABLE IF NOT EXISTS pebbles (
   pebble_id SERIAL PRIMARY KEY,
@@ -95,17 +104,52 @@ CREATE TABLE IF NOT EXISTS pebbles (
   hero_image_url TEXT,
   field_notes JSONB NOT NULL DEFAULT '[{"type":"paragraph","children":[{"text":""}]}]'::jsonb,
   is_private BOOLEAN NOT NULL DEFAULT FALSE,
+  status VARCHAR(20) NOT NULL DEFAULT 'published'
+    CHECK (status IN ('draft', 'published')),
+  observed_at TIMESTAMPTZ,
+  observed_on DATE,
+  observed_time TIME,
+  weather VARCHAR(32),
+  pin_name VARCHAR(512),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS pebbles_author_idx ON pebbles (author_id);
 CREATE INDEX IF NOT EXISTS pebbles_created_idx ON pebbles (created_at DESC);
+CREATE INDEX IF NOT EXISTS pebbles_status_idx ON pebbles (status);
 
 CREATE TABLE IF NOT EXISTS pebble_phenomena (
   pebble_id INTEGER NOT NULL REFERENCES pebbles (pebble_id) ON DELETE CASCADE,
   phenomenon_id INTEGER NOT NULL REFERENCES phenomena (phenomenon_id) ON DELETE CASCADE,
   PRIMARY KEY (pebble_id, phenomenon_id)
+);
+
+CREATE TABLE IF NOT EXISTS pebble_fields (
+  pebble_id INTEGER NOT NULL REFERENCES pebbles (pebble_id) ON DELETE CASCADE,
+  field_id INTEGER NOT NULL REFERENCES fields (field_id) ON DELETE CASCADE,
+  PRIMARY KEY (pebble_id, field_id)
+);
+
+CREATE TABLE IF NOT EXISTS pebble_other_tags (
+  other_tag_id SERIAL PRIMARY KEY,
+  pebble_id INTEGER NOT NULL REFERENCES pebbles (pebble_id) ON DELETE CASCADE,
+  name VARCHAR(80) NOT NULL,
+  UNIQUE (pebble_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS pebble_resources (
+  resource_id SERIAL PRIMARY KEY,
+  pebble_id INTEGER NOT NULL REFERENCES pebbles (pebble_id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS pebble_questions (
+  question_id SERIAL PRIMARY KEY,
+  pebble_id INTEGER NOT NULL REFERENCES pebbles (pebble_id) ON DELETE CASCADE,
+  prompt TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS pebble_media (
@@ -131,6 +175,7 @@ CREATE TABLE IF NOT EXISTS collections (
   name VARCHAR(255) NOT NULL,
   is_private BOOLEAN NOT NULL DEFAULT FALSE,
   is_collaborative BOOLEAN NOT NULL DEFAULT FALSE,
+  cover_image_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -204,15 +249,25 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS notifications_recipient_created_idx
   ON notifications (recipient_id, created_at DESC);
 
--- Seed scientific fields and sample phenomena (idempotent).
+-- Seed scientific fields and the offered phenomenon topics (idempotent).
 INSERT INTO fields (name) VALUES
-  ('Biology'),
-  ('Physics'),
-  ('Chemistry'),
-  ('Earth Science'),
+  ('Agricultural Science'),
   ('Astronomy'),
-  ('Mathematics'),
+  ('Biology'),
+  ('Chemistry'),
+  ('Climate Science'),
   ('Computer Science'),
+  ('Earth Science'),
+  ('Engineering & Technology'),
+  ('Environmental Science'),
+  ('Health & Medicine'),
+  ('Marine Science'),
+  ('Materials Science'),
+  ('Mathematics'),
+  ('Microbiology'),
+  ('Neuroscience'),
+  ('Paleontology'),
+  ('Physics'),
   ('Psychology')
 ON CONFLICT (name) DO NOTHING;
 
@@ -221,22 +276,200 @@ SELECT f.field_id, p.name
 FROM fields f
 JOIN (
   VALUES
-    ('Biology', 'evolution'),
-    ('Biology', 'photosynthesis'),
-    ('Biology', 'natural selection'),
-    ('Physics', 'gravity'),
-    ('Physics', 'electromagnetism'),
-    ('Physics', 'quantum entanglement'),
-    ('Chemistry', 'catalysis'),
-    ('Chemistry', 'oxidation'),
-    ('Earth Science', 'plate tectonics'),
-    ('Earth Science', 'erosion'),
-    ('Astronomy', 'redshift'),
-    ('Astronomy', 'black holes'),
-    ('Mathematics', 'fractals'),
-    ('Computer Science', 'machine learning'),
-    ('Psychology', 'cognitive bias')
+    ('Agricultural Science', 'Crop Science & Plant Production'),
+    ('Agricultural Science', 'Soil Science'),
+    ('Agricultural Science', 'Animal Science & Livestock'),
+    ('Agricultural Science', 'Food & Agriculture'),
+    ('Agricultural Science', 'Sustainable Agriculture'),
+    ('Agricultural Science', 'Agricultural Technology'),
+    ('Agricultural Science', 'Genetics & Breeding'),
+    ('Agricultural Science', 'Pests, Diseases & Crop Protection'),
+    ('Agricultural Science', 'Water & Irrigation'),
+    ('Agricultural Science', 'Agricultural Economics & Systems'),
+    ('Astronomy', 'Solar System'),
+    ('Astronomy', 'Stars'),
+    ('Astronomy', 'Galaxies & the Universe'),
+    ('Astronomy', 'Planets & Moons'),
+    ('Astronomy', 'Space Exploration'),
+    ('Astronomy', 'The Sun & Solar Activity'),
+    ('Astronomy', 'Earth & Space'),
+    ('Astronomy', 'Gravity & Orbits'),
+    ('Astronomy', 'Cosmology'),
+    ('Astronomy', 'Astrobiology & Life in the Universe'),
+    ('Biology', 'Cell Biology'),
+    ('Biology', 'Genetics & Heredity'),
+    ('Biology', 'Evolution'),
+    ('Biology', 'Ecology & Ecosystems'),
+    ('Biology', 'Biodiversity & Classification'),
+    ('Biology', 'Plants'),
+    ('Biology', 'Animals'),
+    ('Biology', 'Reproduction & Development'),
+    ('Biology', 'Physiology & Body Systems'),
+    ('Biology', 'Behavior'),
+    ('Biology', 'Biotechnology'),
+    ('Chemistry', 'Matter & Its Properties'),
+    ('Chemistry', 'Atomic Structure'),
+    ('Chemistry', 'The Periodic Table'),
+    ('Chemistry', 'Chemical Reactions'),
+    ('Chemistry', 'Chemical Bonds'),
+    ('Chemistry', 'Solutions & Mixtures'),
+    ('Chemistry', 'Acids & Bases'),
+    ('Chemistry', 'Energy & Thermochemistry'),
+    ('Chemistry', 'Rates & Equilibrium'),
+    ('Chemistry', 'Organic Chemistry'),
+    ('Chemistry', 'Biochemistry'),
+    ('Climate Science', 'Climate Systems'),
+    ('Climate Science', 'Weather & Atmospheric Processes'),
+    ('Climate Science', 'Climate Change'),
+    ('Climate Science', 'Greenhouse Effect'),
+    ('Climate Science', 'Carbon Cycle'),
+    ('Climate Science', 'Oceans & Climate'),
+    ('Climate Science', 'Ice, Snow & Glaciers'),
+    ('Climate Science', 'Climate Modeling & Data'),
+    ('Climate Science', 'Climate Impacts'),
+    ('Climate Science', 'Climate Solutions & Adaptation'),
+    ('Computer Science', 'Computing & Algorithms'),
+    ('Computer Science', 'Programming & Coding'),
+    ('Computer Science', 'Data & Data Science'),
+    ('Computer Science', 'Artificial Intelligence & Machine Learning'),
+    ('Computer Science', 'Computer Systems & Hardware'),
+    ('Computer Science', 'Networks & the Internet'),
+    ('Computer Science', 'Cybersecurity'),
+    ('Computer Science', 'Human-Computer Interaction'),
+    ('Computer Science', 'Computational Modeling & Simulation'),
+    ('Computer Science', 'Robotics & Automation'),
+    ('Earth Science', 'Geology & Rocks'),
+    ('Earth Science', 'Plate Tectonics'),
+    ('Earth Science', 'Earthquakes & Volcanoes'),
+    ('Earth Science', 'Earth''s Interior'),
+    ('Earth Science', 'Minerals & Resources'),
+    ('Earth Science', 'Weather & Atmosphere'),
+    ('Earth Science', 'Water Cycle & Freshwater'),
+    ('Earth Science', 'Oceans'),
+    ('Earth Science', 'Landforms & Surface Processes'),
+    ('Earth Science', 'Natural Hazards'),
+    ('Earth Science', 'Earth''s History'),
+    ('Engineering & Technology', 'Mechanical Engineering'),
+    ('Engineering & Technology', 'Civil & Structural Engineering'),
+    ('Engineering & Technology', 'Electrical Engineering'),
+    ('Engineering & Technology', 'Chemical Engineering'),
+    ('Engineering & Technology', 'Biomedical Engineering'),
+    ('Engineering & Technology', 'Environmental Engineering'),
+    ('Engineering & Technology', 'Aerospace Engineering'),
+    ('Engineering & Technology', 'Robotics & Automation'),
+    ('Engineering & Technology', 'Energy & Power Systems'),
+    ('Engineering & Technology', 'Design & Prototyping'),
+    ('Engineering & Technology', 'Technology & Society'),
+    ('Environmental Science', 'Ecosystems & Biodiversity'),
+    ('Environmental Science', 'Conservation'),
+    ('Environmental Science', 'Pollution'),
+    ('Environmental Science', 'Natural Resources'),
+    ('Environmental Science', 'Water Resources'),
+    ('Environmental Science', 'Waste & Recycling'),
+    ('Environmental Science', 'Environmental Health'),
+    ('Environmental Science', 'Human Impacts'),
+    ('Environmental Science', 'Sustainability'),
+    ('Environmental Science', 'Environmental Monitoring'),
+    ('Environmental Science', 'Restoration & Management'),
+    ('Health & Medicine', 'Human Anatomy'),
+    ('Health & Medicine', 'Human Physiology'),
+    ('Health & Medicine', 'Nutrition'),
+    ('Health & Medicine', 'Disease & Infection'),
+    ('Health & Medicine', 'Immunology'),
+    ('Health & Medicine', 'Genetics & Genomics'),
+    ('Health & Medicine', 'Public Health'),
+    ('Health & Medicine', 'Epidemiology'),
+    ('Health & Medicine', 'Medical Technology'),
+    ('Health & Medicine', 'Pharmacology & Treatments'),
+    ('Health & Medicine', 'Reproductive & Developmental Health'),
+    ('Marine Science', 'Marine Ecosystems'),
+    ('Marine Science', 'Oceanography'),
+    ('Marine Science', 'Marine Biology'),
+    ('Marine Science', 'Coral Reefs'),
+    ('Marine Science', 'Marine Food Webs'),
+    ('Marine Science', 'Ocean Circulation'),
+    ('Marine Science', 'Waves, Tides & Currents'),
+    ('Marine Science', 'Marine Geology'),
+    ('Marine Science', 'Ocean Chemistry'),
+    ('Marine Science', 'Marine Conservation'),
+    ('Marine Science', 'Human Impacts on Oceans'),
+    ('Materials Science', 'Metals'),
+    ('Materials Science', 'Ceramics & Glass'),
+    ('Materials Science', 'Polymers & Plastics'),
+    ('Materials Science', 'Composites'),
+    ('Materials Science', 'Biomaterials'),
+    ('Materials Science', 'Nanomaterials'),
+    ('Materials Science', 'Material Properties'),
+    ('Materials Science', 'Material Structure'),
+    ('Materials Science', 'Material Processing & Manufacturing'),
+    ('Materials Science', 'Material Failure & Durability'),
+    ('Materials Science', 'Sustainable Materials'),
+    ('Mathematics', 'Number & Quantity'),
+    ('Mathematics', 'Algebra'),
+    ('Mathematics', 'Geometry'),
+    ('Mathematics', 'Measurement'),
+    ('Mathematics', 'Functions'),
+    ('Mathematics', 'Statistics'),
+    ('Mathematics', 'Probability'),
+    ('Mathematics', 'Data Analysis & Visualization'),
+    ('Mathematics', 'Calculus'),
+    ('Mathematics', 'Mathematical Modeling'),
+    ('Mathematics', 'Logic & Problem Solving'),
+    ('Microbiology', 'Bacteria'),
+    ('Microbiology', 'Viruses'),
+    ('Microbiology', 'Fungi'),
+    ('Microbiology', 'Protists & Microorganisms'),
+    ('Microbiology', 'Microbial Genetics'),
+    ('Microbiology', 'Microbial Evolution'),
+    ('Microbiology', 'Microbial Ecology'),
+    ('Microbiology', 'Microbiomes'),
+    ('Microbiology', 'Infectious Disease'),
+    ('Microbiology', 'Immunology'),
+    ('Microbiology', 'Biotechnology & Fermentation'),
+    ('Neuroscience', 'Brain Structure & Function'),
+    ('Neuroscience', 'Neurons & Nervous Systems'),
+    ('Neuroscience', 'Sensation & Perception'),
+    ('Neuroscience', 'Learning & Memory'),
+    ('Neuroscience', 'Emotions'),
+    ('Neuroscience', 'Behavior'),
+    ('Neuroscience', 'Sleep & Circadian Rhythms'),
+    ('Neuroscience', 'Brain Development'),
+    ('Neuroscience', 'Neuroplasticity'),
+    ('Neuroscience', 'Neurological Disorders'),
+    ('Neuroscience', 'Neurotechnology'),
+    ('Paleontology', 'Fossils & Fossilization'),
+    ('Paleontology', 'Dinosaurs'),
+    ('Paleontology', 'Ancient Life'),
+    ('Paleontology', 'Evolutionary History'),
+    ('Paleontology', 'Extinction'),
+    ('Paleontology', 'Human Evolution'),
+    ('Paleontology', 'Paleoecology'),
+    ('Paleontology', 'Ancient Environments & Climate'),
+    ('Paleontology', 'Geologic Time'),
+    ('Paleontology', 'Mass Extinctions'),
+    ('Physics', 'Motion & Forces'),
+    ('Physics', 'Energy'),
+    ('Physics', 'Momentum'),
+    ('Physics', 'Gravity'),
+    ('Physics', 'Waves & Sound'),
+    ('Physics', 'Light & Optics'),
+    ('Physics', 'Electricity & Magnetism'),
+    ('Physics', 'Heat & Thermodynamics'),
+    ('Physics', 'Matter & Properties'),
+    ('Physics', 'Nuclear & Particle Physics'),
+    ('Physics', 'Relativity & Quantum Physics'),
+    ('Psychology', 'Human Behavior'),
+    ('Psychology', 'Cognition & Thinking'),
+    ('Psychology', 'Learning'),
+    ('Psychology', 'Memory'),
+    ('Psychology', 'Emotion'),
+    ('Psychology', 'Motivation'),
+    ('Psychology', 'Development Across the Lifespan'),
+    ('Psychology', 'Social Behavior'),
+    ('Psychology', 'Personality'),
+    ('Psychology', 'Mental Health'),
+    ('Psychology', 'Perception & Sensation')
 ) AS p(field_name, name) ON p.field_name = f.name
-ON CONFLICT (field_id, name) DO NOTHING;
+ON CONFLICT (field_id, name) DO UPDATE SET offered = TRUE;
 
 -- session table is created by connect-pg-simple when createTableIfMissing is true.

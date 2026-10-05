@@ -1,5 +1,7 @@
 import {
   EMPTY_FIELD_NOTES,
+  FIELD_NOTES_WORD_CAP,
+  countFieldNoteWords,
   createMediaNode,
   normalizeFieldNotes,
 } from '../helpers/fieldNotesHelpers';
@@ -30,5 +32,16 @@ describe('fieldNotesHelpers', () => {
       caption: 'photo',
     });
     expect(node.children).toEqual([{ text: '' }]);
+  });
+
+  test('countFieldNoteWords counts words across blocks', () => {
+    expect(countFieldNoteWords(EMPTY_FIELD_NOTES)).toBe(0);
+    expect(
+      countFieldNoteWords([
+        { type: 'heading', children: [{ text: 'Ice shelf' }] },
+        { type: 'paragraph', children: [{ text: 'Two more words' }] },
+      ])
+    ).toBe(5);
+    expect(FIELD_NOTES_WORD_CAP).toBe(250);
   });
 });

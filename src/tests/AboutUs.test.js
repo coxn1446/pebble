@@ -20,6 +20,10 @@ describe('AboutUs', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/so, i decided to build the nest/i)).toBeInTheDocument();
     expect(screen.getByText(/now, i invite you to add your pebble/i)).toBeInTheDocument();
+    expect(screen.queryByText(/peppered moths/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/there is an incredible community of people observing, documenting, and protecting/i)
+    ).toBeInTheDocument();
     expect(screen.getByText('JUL 2023')).toBeInTheDocument();
     expect(screen.getByText('AUG 2023')).toBeInTheDocument();
     expect(screen.getByText('FEB 2024')).toBeInTheDocument();
@@ -52,18 +56,36 @@ describe('AboutUs', () => {
     expect(screen.getByText(/what if we could do something similar/i).tagName).toBe('STRONG');
     expect(screen.getByText(/so, i decided to build the nest/i)).toHaveClass('font-semibold');
     expect(screen.getByText(/now, i invite you to add your pebble/i).parentElement).toHaveClass(
-      'text-justify'
+      'text-justify',
+      'text-sm'
     );
-    expect(screen.getByRole('heading', { name: 'About Us' }).closest('.items-center')).not.toBeNull();
+    const aboutHeading = screen.getByRole('heading', { name: 'About Us' });
+    const inspiration = screen.getByText('Inspiration');
+    expect(aboutHeading).toHaveClass('leading-snug');
+    expect(inspiration.parentElement).toHaveClass('flex', 'flex-col', 'gap-3');
+    expect(inspiration.compareDocumentPosition(aboutHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    expect(aboutHeading.closest('.lg\\:items-center')).not.toBeNull();
   });
 
   test('renders how we are different and footer', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { name: /how we're different/i })).toBeInTheDocument();
+    const differentHeading = screen.getByRole('heading', { name: /how we're different/i });
+    expect(differentHeading).toBeInTheDocument();
+    expect(differentHeading.parentElement).toHaveClass('my-auto');
+    expect(differentHeading.parentElement.parentElement).toHaveClass('justify-center');
     expect(screen.getByText('Pebbles are created by professionals')).toBeInTheDocument();
+    expect(screen.getByText('Pebbles are created by professionals')).toHaveClass('font-sans');
+    expect(screen.getByText('Pebbles are created by professionals')).not.toHaveClass('font-display');
     const educatorLine = screen.getByText(/made for educators/i);
+    expect(educatorLine).toHaveClass('font-display');
     expect(educatorLine).not.toHaveClass('italic');
+    const footer = screen.getByRole('contentinfo');
+    expect(footer.querySelector('img')).toHaveClass('logo-outline');
+    expect(footer.querySelector('img')).not.toHaveClass('grayscale');
+    expect(footer.firstElementChild).toHaveClass('items-center', 'justify-center', 'py-2', 'md:py-2');
     expect(screen.getByText('by an educator').tagName).toBe('EM');
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '#privacy');
@@ -76,8 +98,8 @@ describe('AboutUs', () => {
     renderPage();
 
     expect(screen.getByTestId('about-us-scroll')).toHaveClass('snap-y', 'snap-mandatory');
-    expect(document.getElementById('about-us')).toHaveClass('snap-start');
-    expect(document.getElementById('how-we-are-different')).toHaveClass('snap-start');
+    expect(document.getElementById('about-us')).toHaveClass('h-dvh', 'snap-start');
+    expect(document.getElementById('how-we-are-different')).toHaveClass('h-dvh', 'snap-start');
     expect(screen.getByRole('link', { name: 'About Us' })).toHaveAttribute('href', '/about-us');
 
     const scroller = screen.getByTestId('about-us-scroll');

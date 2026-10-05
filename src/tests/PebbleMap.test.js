@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PebbleMap from '../components/Map/PebbleMap';
 import { __resetGooglePlacesLoaderForTests } from '../helpers/placesHelpers';
-import { GLOBE_CAMERA_RANGE } from '../helpers/mapHelpers';
+import { GLOBE_CAMERA_RANGE, PLACE_CAMERA_RANGE } from '../helpers/mapHelpers';
 
 jest.mock('../helpers/placesHelpers', () => {
   const actual = jest.requireActual('../helpers/placesHelpers');
@@ -233,6 +233,97 @@ describe('PebbleMap', () => {
     expect(mapInstances[0].flyCameraTo).toHaveBeenCalled();
   });
 
+  test('labels a cluster with a sandstone count and a Biology pin with the DNA glyph', async () => {
+    const { google, mapInstances } = createGoogleMaps3dMock();
+    fetchPlacesApiKey.mockResolvedValue({ key: 'test-key', configured: true });
+    loadGoogleMaps3dApi.mockResolvedValue(google);
+
+    renderMap({
+      pebbles: [
+        portland,
+        {
+          pebble_id: 12,
+          title: 'Nearby',
+          place_name: 'South Portland, ME',
+          place_lat: 43.64,
+          place_lng: -70.24,
+        },
+        {
+          pebble_id: 20,
+          title: 'Cell notes',
+          place_lat: 35.68,
+          place_lng: 139.69,
+          fields: [{ field_id: 3, name: 'Biology' }],
+        },
+        {
+          pebble_id: 30,
+          title: 'Bare pin',
+          place_lat: -33.87,
+          place_lng: 151.21,
+        },
+        {
+          pin_type: 'user',
+          user_id: 7,
+          username: 'ada',
+          display_name: 'Ada',
+          title: 'Ada',
+          place_lat: -34.6,
+          place_lng: -58.4,
+          profile_pic_url: '/uploads/ada.png',
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(mapInstances[0]._children.length).toBe(4);
+    });
+
+    const buttons = mapInstances[0]._children.map((marker) => marker._children[0]);
+    const cluster = buttons.find((button) => button.textContent === '2');
+    const biology = buttons.find((button) => button.getAttribute('aria-label') === 'Biology');
+    const plain = buttons.find((button) => button.getAttribute('aria-label') === 'Pin');
+    const person = buttons.find((button) => button.className.includes('pebble-map-pin--user'));
+
+    expect(cluster).toHaveClass('pebble-map-pin--mixed');
+    expect(cluster).toHaveAttribute('aria-label', '2');
+    expect(biology).toHaveClass('pebble-map-pin', 'pebble-map-pin--glyph');
+    expect(biology.className).not.toContain('pebble-map-pin--mixed');
+    expect(biology.querySelector('img')).toHaveAttribute('data-icon', 'biology');
+    expect(biology.textContent).not.toContain('☺');
+    expect(plain).toHaveTextContent('•');
+    expect(plain.className).not.toContain('pebble-map-pin--glyph');
+    expect(person.querySelector('img')).toHaveAttribute('src', '/uploads/ada.png');
+    expect(person.textContent).not.toContain('☺');
+  });
+
+  test('a person without a photo is a penguin on their color', async () => {
+    const { google, mapInstances } = createGoogleMaps3dMock();
+    fetchPlacesApiKey.mockResolvedValue({ key: 'test-key', configured: true });
+    loadGoogleMaps3dApi.mockResolvedValue(google);
+
+    renderMap({
+      pebbles: [
+        {
+          pin_type: 'user',
+          user_id: 4,
+          username: 'bea',
+          display_name: 'Bea',
+          title: 'Bea',
+          place_lat: 40.7,
+          place_lng: -74,
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(mapInstances[0]._children.length).toBe(1);
+    });
+    const button = mapInstances[0]._children[0]._children[0];
+    expect(button.className).toContain('avatar-bg-');
+    expect(button.querySelector('svg')).toHaveAttribute('data-icon', 'penguin');
+    expect(button.textContent).not.toMatch(/🦊|🐧/);
+  });
+
   test('cluster click selects the group and flies camera', async () => {
     const onSelectGroup = jest.fn();
     const { google, markerClickHandlers, mapInstances } = createGoogleMaps3dMock();
@@ -279,5 +370,57 @@ describe('PebbleMap', () => {
         }),
       })
     );
+  });
+
+  test('a focus target lands at a place-scale range', async () => {
+    const { google, mapInstances } = createGoogleMaps3dMock();
+    fetchPlacesApiKey.mockResolvedValue({ key: 'test-key', configured: true });
+    loadGoogleMaps3dApi.mockResolvedValue(google);
+
+    renderMap({
+      focusTarget: { lat: -75.2, lng: -0.1, nonce: 1 },
+    });
+
+    await waitFor(() => {
+      expect(mapInstances[0].flyCameraTo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          endCamera: expect.objectContaining({
+            center: expect.objectContaining({ lat: -75.2, lng: -0.1 }),
+            range: PLACE_CAMERA_RANGE,
+          }),
+        })
+      );
+    });
+  });
+
+  test('resetSignal flies the camera back to the globe home', async () => {
+    const { google, mapInstances } = createGoogleMaps3dMock();
+    fetchPlacesApiKey.mockResolvedValue({ key: 'test-key', configured: true });
+    loadGoogleMaps3dApi.mockResolvedValue(google);
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <PebbleMap pebbles={[portland]} onSelectGroup={jest.fn()} resetSignal={0} />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(mapInstances.length).toBe(1));
+    mapInstances[0].flyCameraTo.mockClear();
+
+    rerender(
+      <MemoryRouter>
+        <PebbleMap pebbles={[portland]} onSelectGroup={jest.fn()} resetSignal={1} />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(mapInstances[0].flyCameraTo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          endCamera: expect.objectContaining({
+            center: expect.objectContaining({ lat: 20, lng: 0 }),
+            range: GLOBE_CAMERA_RANGE,
+          }),
+        })
+      );
+    });
   });
 });

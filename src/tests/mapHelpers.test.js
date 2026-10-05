@@ -7,6 +7,7 @@ import {
   MAP_PIN_COLOR,
   overlapRadiusMeters,
   pinInViewport,
+  PLACE_CAMERA_RANGE,
   rangeForPins,
   viewportBoundsFromCamera,
   zoomFromCameraRange,
@@ -126,11 +127,18 @@ describe('mapHelpers', () => {
     expect(zoomFromCameraRange(5_000)).toBe(14);
   });
 
+  test('rangeForPins keeps a single pin at a place-scale range', () => {
+    const range = rangeForPins([pin(1, -75.2, -0.1)]);
+    expect(range).toBe(PLACE_CAMERA_RANGE);
+    expect(range).toBeGreaterThan(50_000);
+    expect(range).toBeLessThan(1_000_000);
+  });
+
   test('rangeForPins scales with pin spread', () => {
     const tight = rangeForPins([pin(1, 43.65, -70.25), pin(2, 43.66, -70.26)]);
     const wide = rangeForPins([pin(1, 40, -70), pin(2, 45, -65)]);
-    expect(tight).toBeGreaterThanOrEqual(2500);
-    expect(wide).toBeGreaterThan(tight);
+    expect(tight).toBe(PLACE_CAMERA_RANGE);
+    expect(wide).toBeGreaterThan(PLACE_CAMERA_RANGE);
   });
 
   test('viewportBoundsFromCamera returns a box around the camera center', () => {

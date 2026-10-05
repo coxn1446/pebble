@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fieldIconForName } from '../Icons/Icons';
+import { fieldIconForName, SketchGlobeIcon } from '../Icons/Icons';
+import { formatObserved, pinLabel } from '../../helpers/pebbleHelpers';
 
 const primaryFieldName = (pebble) => {
   const names = (pebble?.phenomena || []).map((ph) => ph.field_name).filter(Boolean);
@@ -12,7 +13,7 @@ const primaryFieldName = (pebble) => {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 };
 
-const PebbleCard = ({ pebble }) => {
+const PebbleCard = ({ pebble, illustration = false }) => {
   const navigate = useNavigate();
   const hasHero = Boolean(pebble.hero_image_url);
   const fieldName = primaryFieldName(pebble);
@@ -38,29 +39,43 @@ const PebbleCard = ({ pebble }) => {
           <div className="flex items-center gap-2">
             <span
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-background text-accent"
-              title={fieldName || 'Field'}
-              aria-label={fieldName || 'Scientific field'}
+              title={illustration ? 'Pebble' : fieldName || 'Field'}
+              aria-label={illustration ? 'Pebble' : fieldName || 'Scientific field'}
             >
-              <FieldIcon className="h-4 w-4" />
+              {illustration ? (
+                <SketchGlobeIcon className="h-6 w-6" />
+              ) : (
+                <FieldIcon className="h-4 w-4" />
+              )}
             </span>
             <h2 className="min-w-0 truncate font-display text-lg font-semibold text-ink">
               {pebble.title}
             </h2>
           </div>
-          {pebble.place_name ? (
-            <p className="mt-1 truncate text-xs text-muted">{pebble.place_name}</p>
+          {pinLabel(pebble) || formatObserved(pebble) ? (
+            <p className="mt-1 truncate text-xs text-muted">
+              {[pinLabel(pebble), formatObserved(pebble)].filter(Boolean).join(' · ')}
+            </p>
           ) : null}
           {pebble.description ? (
             <p className="mt-1 line-clamp-2 text-sm text-ink">{pebble.description}</p>
           ) : null}
-          {pebble.phenomena?.length ? (
+          {pebble.phenomena?.length || pebble.other_tags?.length ? (
             <div className="mt-1.5 flex flex-wrap gap-1.5 overflow-hidden">
-              {pebble.phenomena.map((ph) => (
+              {(pebble.phenomena || []).map((ph) => (
                 <span
                   key={ph.phenomenon_id}
                   className="rounded-xl bg-background px-2 py-0.5 text-xs text-muted"
                 >
                   {ph.name}
+                </span>
+              ))}
+              {(pebble.other_tags || []).map((tag) => (
+                <span
+                  key={tag.other_tag_id || tag.name}
+                  className="rounded-xl bg-background px-2 py-0.5 text-xs text-muted"
+                >
+                  {tag.name}
                 </span>
               ))}
             </div>

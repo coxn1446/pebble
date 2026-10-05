@@ -99,7 +99,14 @@ describe('ContentArea', () => {
     expect(screen.queryByRole('link', { name: 'Feed' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Notifications/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Profile/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Tutorial' })).toHaveAttribute('href', '/how-it-works');
+    expect(screen.getByTestId('user-avatar-default').querySelector('svg')).toHaveAttribute(
+      'data-icon',
+      'penguin'
+    );
     expect(screen.getByTestId('content-pane')).toHaveAttribute('data-layout', 'readable');
+    expect(screen.getByTestId('content-pane')).toHaveClass('overflow-x-hidden');
+    expect(screen.getByTestId('content-pane').parentElement).toHaveClass('h-dvh', 'max-h-dvh', 'overflow-hidden');
   });
 
   test('uses full-bleed content pane on map, profile, and settings', () => {

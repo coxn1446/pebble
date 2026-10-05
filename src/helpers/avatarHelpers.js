@@ -1,35 +1,17 @@
 /**
- * Deterministic default avatars: animal emoji + brand color token class.
- * Colors are limited to Tailwind tokens from tailwind.config.js.
+ * Default avatar: one penguin on a brand-color background chosen from the user id.
+ * Colors are Tailwind tokens from tailwind.config.js.
  */
 
-export const DEFAULT_AVATAR_EMOJIS = [
-  '🦊',
-  '🦁',
-  '🐯',
-  '🐨',
-  '🐼',
-  '🐸',
-  '🦉',
-  '🦄',
-  '🐙',
-  '🦋',
-  '🐢',
-  '🐝',
-  '🐳',
-  '🦜',
-  '🐧',
-  '🦩',
+export const DEFAULT_AVATAR_COLORS = [
+  { className: 'bg-ocean', pinClass: 'avatar-bg-ocean' },
+  { className: 'bg-moss', pinClass: 'avatar-bg-moss' },
+  { className: 'bg-sandstone', pinClass: 'avatar-bg-sandstone' },
+  { className: 'bg-pebble', pinClass: 'avatar-bg-pebble' },
+  { className: 'bg-ocean-hover', pinClass: 'avatar-bg-ocean-hover' },
 ];
 
-export const DEFAULT_AVATAR_COLOR_CLASSES = [
-  'bg-ocean',
-  'bg-moss',
-  'bg-sandstone',
-  'bg-accent',
-  'bg-slate',
-  'bg-pebble',
-];
+export const DEFAULT_AVATAR_COLOR_CLASSES = DEFAULT_AVATAR_COLORS.map((color) => color.className);
 
 function hashUserId(userId) {
   const n = Number(userId);
@@ -37,14 +19,13 @@ function hashUserId(userId) {
   return Math.floor(Math.abs(Math.sin(n + 1) * 10000)) || 0;
 }
 
-export function getDefaultAvatarEmoji(userId) {
-  const hash = hashUserId(userId);
-  return DEFAULT_AVATAR_EMOJIS[hash % DEFAULT_AVATAR_EMOJIS.length];
-}
+const colorForUser = (userId) =>
+  DEFAULT_AVATAR_COLORS[hashUserId(userId) % DEFAULT_AVATAR_COLORS.length];
 
 export function getDefaultAvatarColorClass(userId) {
-  const hash = hashUserId(userId);
-  return DEFAULT_AVATAR_COLOR_CLASSES[
-    Math.floor(hash / DEFAULT_AVATAR_EMOJIS.length) % DEFAULT_AVATAR_COLOR_CLASSES.length
-  ];
+  return colorForUser(userId).className;
+}
+
+export function getDefaultAvatarPinClass(userId) {
+  return colorForUser(userId).pinClass;
 }

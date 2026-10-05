@@ -31,12 +31,21 @@ describe('Icons', () => {
         <BiologyIcon />
       </>
     );
-    expect(container.querySelectorAll('svg')).toHaveLength(10);
+    expect(container.querySelectorAll('svg')).toHaveLength(9);
+    expect(container.querySelector('img[data-icon="biology"]')).toBeInTheDocument();
   });
 
   test('fieldIconForName maps taxonomy fields', () => {
     expect(fieldIconForName('Biology')).toBe(BiologyIcon);
     expect(fieldIconForName('Unknown')).toBe(DataIcon);
+  });
+
+  test('Biology chip uses the cropped DNA image', () => {
+    const { container } = render(<BiologyIcon />);
+    const img = container.querySelector('img');
+    expect(img).toHaveAttribute('data-icon', 'biology');
+    expect(img).toHaveAttribute('src', 'test-file-stub');
+    expect(container.querySelector('svg')).not.toBeInTheDocument();
   });
 
   test('IconLabel formats as Icon | Name', () => {

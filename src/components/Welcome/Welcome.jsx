@@ -67,22 +67,26 @@ const AUDIENCES = [
 const WelcomeHero = () => (
   <section id="hero" className={`${sectionClassName} relative`}>
     <WelcomeHeader />
-    <div className={`${sectionPadClassName} justify-center`}>
-      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 text-center animate-fade-up">
-        <div className="flex items-center gap-4 md:gap-5">
+    <div className={`${sectionPadClassName} overflow-y-auto`}>
+      <div className="mx-auto my-auto flex w-full max-w-3xl flex-col items-center gap-6 text-center animate-fade-up md:gap-8">
+        <div className="flex items-center gap-3 md:gap-5">
           <BrandMark size="hero" showWordmark={false} to={null} animated />
-          <div className="flex w-max flex-col gap-3">
-            <h1 className="whitespace-nowrap font-display text-5xl font-medium lowercase leading-none tracking-tight text-ink md:text-6xl">
+          <div className="flex w-max flex-col gap-2 md:gap-3">
+            <h1 className="whitespace-nowrap font-display text-4xl font-medium lowercase leading-none tracking-tight text-ink md:text-5xl lg:text-6xl">
               pebble
             </h1>
             <p
-              className="flex justify-between text-xs font-semibold uppercase text-moss"
+              className="flex justify-between font-display text-xs font-semibold uppercase text-moss"
               aria-label={WELCOME_TAGLINE}
             >
               <span>Collect</span>
-              <span aria-hidden="true">•</span>
+              <span aria-hidden="true" className="text-ink">
+                •
+              </span>
               <span>Connect</span>
-              <span aria-hidden="true">•</span>
+              <span aria-hidden="true" className="text-ink">
+                •
+              </span>
               <span>Create</span>
             </p>
           </div>
@@ -105,23 +109,31 @@ const WelcomeHero = () => (
 
 const AudienceSection = () => (
   <section id="audience" className={sectionClassName}>
-    <div className={sectionPadClassName}>
+    <div
+      data-testid="audience-stage"
+      className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-4 py-16 md:px-8 md:py-20"
+    >
       <div className="mx-auto w-full max-w-6xl">
-        <SectionHeader label="Audience" title="Who is pebble for?" />
+        <SectionHeader
+          label="Audience"
+          title="Who is pebble for?"
+          className="mb-0"
+          titleClassName="leading-none"
+        />
+        <div className="h-16 shrink-0" data-testid="audience-gap" />
 
-        <div className="grid grid-cols-1 gap-x-4 gap-y-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 items-start gap-x-3 gap-y-6 lg:grid-cols-4 lg:gap-x-4 lg:gap-y-8">
           {AUDIENCES.map(({ title, description, src }) => (
             <div key={title} className="group text-center">
-              <div className="welcome-blob mb-2">
-                <img src={src} alt="" className="h-full w-full object-contain p-3" />
-              </div>
+              <img src={src} alt="" className="mx-auto mb-2 h-24 w-auto md:h-32 lg:h-40" />
               <h3 className="mb-3 font-display text-2xl font-medium text-ink">{title}</h3>
-              <p className="px-2 text-sm leading-relaxed text-ink/70">{description}</p>
+              <p className="px-2 text-sm leading-none text-ink/70">{description}</p>
             </div>
           ))}
         </div>
 
-        <p className="mt-8 text-center text-sm italic text-moss">
+        <div className="h-16 shrink-0" data-testid="audience-gap" />
+        <p data-testid="audience-note" className="text-center text-sm italic leading-none text-moss">
           Note: Pebble is organized for science-related disciplines
         </p>
       </div>
@@ -131,9 +143,12 @@ const AudienceSection = () => (
 
 const MethodologySection = () => (
   <section id="methodology" className={sectionClassName}>
-    <div className="flex min-h-0 flex-1 flex-col px-4 pt-16 md:px-8 md:pt-20">
-      <div className="mx-auto grid h-full min-h-0 w-full max-w-6xl grid-cols-1 lg:grid-cols-2 lg:gap-12">
-        <div className="flex h-full min-h-0 flex-col" data-testid="methodology-copy">
+    <div
+      data-testid="methodology-body"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-16 pb-8 md:px-8 md:pt-20"
+    >
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 lg:grid-cols-2 lg:gap-12">
+        <div className="flex w-full min-h-0 flex-col" data-testid="methodology-copy">
           <SectionHeader
             label="Methodology"
             title={
@@ -145,6 +160,7 @@ const MethodologySection = () => (
             }
             align="left"
             compact
+            titleClassName="leading-tight"
           />
           <div className="flex flex-col gap-6">
             <p className="max-w-lg text-base leading-relaxed text-ink/70">
@@ -170,15 +186,15 @@ const MethodologySection = () => (
                       {step.number}
                     </span>
                   </div>
-                  <div className={index < METHODOLOGY_STEPS.length - 1 ? 'pb-6' : ''}>
+                  <div className={`min-w-0 flex-1 ${index < METHODOLOGY_STEPS.length - 1 ? 'pb-6' : ''}`}>
                     <h3 className="mb-1 font-display text-xl font-medium text-ink">{step.title}</h3>
-                    <p className="max-w-sm text-sm leading-relaxed text-ink/70">{step.description}</p>
+                    <p className="text-sm leading-relaxed text-ink/70">{step.description}</p>
                   </div>
                 </li>
               ))}
             </ol>
 
-            <div className="flex justify-center">
+            <div className="flex w-full justify-center pt-2 pb-6">
               <Link
                 to="/about-us"
                 data-testid="methodology-learn-more"
@@ -194,7 +210,7 @@ const MethodologySection = () => (
           <img
             src={methodologyArt}
             alt="A pebble observation card with a verified map location"
-            className="w-full max-w-md"
+            className="max-h-48 w-full max-w-md object-contain sm:max-h-64 lg:max-h-none"
           />
         </div>
       </div>

@@ -13,6 +13,10 @@ const AdvancedSearchModal = ({ open, filters, onApply, onClose }) => {
     fieldId: '',
     author: '',
     region: '',
+    favorites: false,
+    hasPhoto: false,
+    hasVideo: false,
+    hasData: false,
     ...filters,
   });
 
@@ -23,6 +27,10 @@ const AdvancedSearchModal = ({ open, filters, onApply, onClose }) => {
       fieldId: filters?.fieldId || '',
       author: filters?.author || '',
       region: filters?.region || '',
+      favorites: Boolean(filters?.favorites),
+      hasPhoto: Boolean(filters?.hasPhoto),
+      hasVideo: Boolean(filters?.hasVideo),
+      hasData: Boolean(filters?.hasData),
     });
   }, [open, filters]);
 
@@ -55,6 +63,10 @@ const AdvancedSearchModal = ({ open, filters, onApply, onClose }) => {
                 fieldId: draft.fieldId || '',
                 author: draft.author.trim(),
                 region: draft.region.trim(),
+                favorites: Boolean(draft.favorites),
+                hasPhoto: Boolean(draft.hasPhoto),
+                hasVideo: Boolean(draft.hasVideo),
+                hasData: Boolean(draft.hasData),
               })
             }
             className="rounded-2xl bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-hover"
@@ -66,7 +78,7 @@ const AdvancedSearchModal = ({ open, filters, onApply, onClose }) => {
     >
       <p className="text-sm text-muted">Narrow map results by text, field, author, or region.</p>
       <label className="block">
-        <span className="mb-1.5 block text-sm text-muted">Query</span>
+        <span className="mb-1.5 block text-sm text-muted">Topic</span>
         <input
           value={draft.q}
           onChange={(e) => setDraft({ ...draft, q: e.target.value })}
@@ -123,6 +135,38 @@ const AdvancedSearchModal = ({ open, filters, onApply, onClose }) => {
           className={inputClass}
           placeholder="City, state, or country"
         />
+      </label>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={Boolean(draft.favorites)}
+          onChange={(e) => setDraft({ ...draft, favorites: e.target.checked })}
+        />
+        Community favorites
+      </label>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={Boolean(draft.hasPhoto)}
+          onChange={(e) => setDraft({ ...draft, hasPhoto: e.target.checked })}
+        />
+        Has photo
+      </label>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={Boolean(draft.hasVideo)}
+          onChange={(e) => setDraft({ ...draft, hasVideo: e.target.checked })}
+        />
+        Has video
+      </label>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={Boolean(draft.hasData)}
+          onChange={(e) => setDraft({ ...draft, hasData: e.target.checked })}
+        />
+        Has data
       </label>
     </Modal>
   );

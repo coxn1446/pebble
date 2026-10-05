@@ -31,5 +31,7 @@ describe('Register', () => {
     expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    const form = screen.getByRole('heading', { name: 'Create account' }).closest('.overflow-y-auto');
+    expect(form).toHaveClass('pt-safe-top', 'pb-safe-bottom', 'overflow-y-auto');
   });
 });

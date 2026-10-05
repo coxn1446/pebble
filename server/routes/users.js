@@ -38,6 +38,9 @@ module.exports = () => {
         contentSearchable: body.contentSearchable,
         profilePicUrl: body.profilePicUrl,
       };
+      if (Object.prototype.hasOwnProperty.call(body, 'blurb')) {
+        payload.blurb = body.blurb;
+      }
       if (Object.prototype.hasOwnProperty.call(body, 'employerOrgId')) {
         payload.employerOrgId = body.employerOrgId;
       }

@@ -5,6 +5,7 @@ import Feed from '../routes/Feed';
 import { createMockPebble } from './__mocks__/fetchMocks';
 
 jest.mock('../helpers/pebbleHelpers', () => ({
+  ...jest.requireActual('../helpers/pebbleHelpers'),
   fetchFeed: jest.fn(),
   searchPebbles: jest.fn(),
   likePebble: jest.fn(),

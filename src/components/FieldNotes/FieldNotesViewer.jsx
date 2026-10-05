@@ -1,8 +1,38 @@
 import React from 'react';
 import { normalizeFieldNotes } from '../../helpers/fieldNotesHelpers';
 
+const URL_RE = /https?:\/\/[^\s]+/g;
+
+const linkify = (text) => {
+  const value = String(text || '');
+  const nodes = [];
+  let last = 0;
+  let match;
+  let i = 0;
+  URL_RE.lastIndex = 0;
+  while ((match = URL_RE.exec(value))) {
+    if (match.index > last) nodes.push(value.slice(last, match.index));
+    const href = match[0];
+    nodes.push(
+      <a
+        key={`${href}-${i}`}
+        href={href}
+        className="text-accent underline-offset-2 hover:underline"
+        target="_blank"
+        rel="noreferrer"
+      >
+        {href}
+      </a>
+    );
+    last = match.index + href.length;
+    i += 1;
+  }
+  if (last < value.length) nodes.push(value.slice(last));
+  return nodes.length ? nodes : value;
+};
+
 const renderLeafText = (leaf, index) => {
-  let content = leaf.text || '';
+  let content = linkify(leaf.text || '');
   if (leaf.bold) content = <strong key={`b-${index}`}>{content}</strong>;
   if (leaf.italic) content = <em key={`i-${index}`}>{content}</em>;
   return <React.Fragment key={index}>{content}</React.Fragment>;
@@ -20,6 +50,12 @@ const NodeView = ({ node, index }) => {
       return (
         <h3 className="mb-2 font-display text-lg font-semibold text-ink">{children}</h3>
       );
+    case 'bulleted-list':
+      return <ul className="mb-2 list-disc pl-5 text-sm text-ink">{children}</ul>;
+    case 'numbered-list':
+      return <ol className="mb-2 list-decimal pl-5 text-sm text-ink">{children}</ol>;
+    case 'list-item':
+      return <li>{children}</li>;
     case 'image':
       return (
         <div className="my-3">

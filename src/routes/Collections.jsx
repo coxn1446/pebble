@@ -63,7 +63,7 @@ const Collections = () => {
             checked={isCollaborative}
             onChange={(e) => setIsCollaborative(e.target.checked)}
           />
-          Collaborative
+          Collaborate
         </label>
         <button type="submit" className="rounded-2xl bg-accent px-3 py-2 text-sm text-white hover:bg-accent-hover">
           Create collection
@@ -79,7 +79,7 @@ const Collections = () => {
             <div className="font-medium">{c.name}</div>
             <div className="text-xs text-muted">
               {c.is_private ? 'Private' : 'Public'}
-              {c.is_collaborative ? ' · Collaborative' : ''}
+              {c.is_collaborative ? ' · Collaborate' : ''}
             </div>
           </Link>
         ))}

@@ -3,7 +3,7 @@
 > **IMPORTANT**: Update this file whenever ANY database changes are made.
 
 ## Last Updated
-2026-08-07 (migrations 02–04)
+2026-09-29 (migration 09)
 
 ## Overview
 
@@ -45,7 +45,8 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
   - `organization_id` (INTEGER FK → organizations) — org account’s owned org
   - `place_id`, `place_name`, `place_lat`, `place_lng` — Google Places denormalized fields
   - `place_locality`, `place_admin_area`, `place_country` — Places address hierarchy for region filters
-  - `profile_pic_url` (TEXT) — optional uploaded avatar; otherwise client shows color + animal emoji default
+  - `profile_pic_url` (TEXT) — optional uploaded avatar; otherwise the client shows a penguin on a brand color chosen from the user id
+  - `blurb` (VARCHAR(500)) — optional short profile text, about three sentences. Empty stores null and renders nothing
   - `content_searchable` (BOOLEAN DEFAULT TRUE) — when false, content excluded from search/discover
   - `created_at`, `updated_at` (TIMESTAMPTZ)
 - **Indexes**:
@@ -53,7 +54,7 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
   - unique on `username`
   - unique on `(auth_provider, provider_id)` where `provider_id` is not null
 - **Source**: `server/db/schema.sql`
-- **Last Modified**: 2026-08-07
+- **Last Modified**: 2026-09-29
 
 ### fields
 - **Purpose**: Overarching scientific field categories (Biology, Physics, etc.)
@@ -65,15 +66,17 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
 - **Last Modified**: 2026-08-04
 
 ### phenomena
-- **Purpose**: Scientific phenomenon tags that ladder up to fields
+- **Purpose**: Scientific phenomenon tags that ladder up to fields. The composer lists rows with `offered = true` (the discipline topic list). A row a pebble still references stays in the table even when it is no longer offered, so older tags such as photosynthesis keep displaying.
 - **Columns**:
   - `phenomenon_id` (SERIAL PRIMARY KEY)
   - `field_id` (INTEGER FK → fields)
   - `name` (VARCHAR NOT NULL)
+  - `offered` (BOOLEAN NOT NULL DEFAULT TRUE) — included in `GET /api/phenomena` when true
   - `created_at` (TIMESTAMPTZ)
   - UNIQUE `(field_id, name)`
+- **Indexes**: `phenomena_offered_field_idx` on `field_id` WHERE `offered`
 - **Source**: `server/db/schema.sql`
-- **Last Modified**: 2026-08-04
+- **Last Modified**: 2026-09-29
 
 ### pebbles
 - **Purpose**: User research posts
@@ -87,18 +90,56 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
   - `hero_image_url` (TEXT) — optional cover image for feed/detail
   - `field_notes` (JSONB) — Slate document
   - `is_private` (BOOLEAN DEFAULT FALSE) — not searchable / not in feeds for others
+  - `status` (VARCHAR) — `draft` | `published` (default `published`). Drafts are author-only and excluded from feed, map, and search
+  - `observed_on` (DATE) — calendar date the researcher entered. Null when no date was saved
+  - `observed_time` (TIME) — optional clock time `HH:mm`. Null on a date-only observation so a save does not invent an hour
+  - `observed_at` (TIMESTAMPTZ) — kept for rows that already have a clock time, and set when a new time is entered. Null when only a date is saved
+  - `weather` (VARCHAR(32)) — `sunny` | `partly_cloudy` | `cloudy` | `rain` | `thunderstorm` | `snow` | `sleet` | `windy` | `foggy` | `icy` | `severe` | `clear_night`. Ids fit the existing width
+  - `pin_name` (VARCHAR(512)) — name the researcher types for the map pin. Feed, preview, the pebble page, and keyword search use this, and fall back to `place_name` when it is empty. Coordinates stay on `place_lat` / `place_lng`
   - `created_at`, `updated_at` (TIMESTAMPTZ)
-- **Indexes**: `author_id`, `created_at DESC`
+- **Indexes**: `author_id`, `created_at DESC`, `status`
 - **Source**: `server/db/schema.sql`
-- **Last Modified**: 2026-08-07
+- **Last Modified**: 2026-09-28
 
 ### pebble_phenomena
 - **Purpose**: M2M pebble ↔ phenomenon tags
 - **Columns**: `pebble_id`, `phenomenon_id` (composite PK)
 - **Last Modified**: 2026-08-04
 
+### pebble_fields
+- **Purpose**: Scientific fields selected on a pebble (many per pebble)
+- **Columns**: `pebble_id`, `field_id` (composite PK)
+- **Last Modified**: 2026-09-25
+
+### pebble_other_tags
+- **Purpose**: Free-text phenomenon tags that are not in the seeded list
+- **Columns**:
+  - `other_tag_id` (SERIAL PRIMARY KEY)
+  - `pebble_id` (INTEGER FK → pebbles)
+  - `name` (VARCHAR(80) NOT NULL)
+  - UNIQUE `(pebble_id, name)`
+- **Last Modified**: 2026-09-25
+
+### pebble_resources
+- **Purpose**: Further-reading links on a pebble
+- **Columns**:
+  - `resource_id` (SERIAL PRIMARY KEY)
+  - `pebble_id` (INTEGER FK → pebbles)
+  - `url` (TEXT NOT NULL)
+  - `sort_order` (INTEGER)
+- **Last Modified**: 2026-09-25
+
+### pebble_questions
+- **Purpose**: Teacher prompts (“questions to consider”) on a pebble
+- **Columns**:
+  - `question_id` (SERIAL PRIMARY KEY)
+  - `pebble_id` (INTEGER FK → pebbles)
+  - `prompt` (TEXT NOT NULL)
+  - `sort_order` (INTEGER)
+- **Last Modified**: 2026-09-25
+
 ### pebble_media
-- **Purpose**: Uploaded media assets referenced by Slate void nodes
+- **Purpose**: Gallery media for a pebble (photo, video, audio, data, attachment). Older rows may still be referenced from field notes.
 - **Columns**:
   - `media_id` (SERIAL PRIMARY KEY)
   - `pebble_id` (INTEGER FK → pebbles, nullable until attached)
@@ -121,8 +162,9 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
   - `name` (VARCHAR NOT NULL)
   - `is_private` (BOOLEAN DEFAULT FALSE)
   - `is_collaborative` (BOOLEAN DEFAULT FALSE)
+  - `cover_image_url` (TEXT) — author-chosen tile photo
   - `created_at`, `updated_at` (TIMESTAMPTZ)
-- **Last Modified**: 2026-08-04
+- **Last Modified**: 2026-09-25
 
 ### collection_members
 - **Purpose**: Invited collaborators on collections
@@ -221,3 +263,20 @@ SQL files live in `server/db/migrations/` (`NNN_description.sql`). Apply with `n
 
 ### `04_pebble_hero_image.sql`
 - Added `pebbles.hero_image_url`
+
+### `05_composer_drafts_taxonomy.sql`
+- Added `pebbles.status`, `observed_at`, `weather`
+- Added `pebble_fields`, `pebble_other_tags`, `pebble_resources`, `pebble_questions`
+- Seeded the remaining scientific fields and a short phenomenon list for each
+
+### `07_observation_pin_name.sql`
+- Added `pebbles.observed_on`, `pebbles.observed_time`, and `pebbles.pin_name`
+- Left existing `observed_at` values in place
+
+### `09_user_blurb.sql`
+- Added `users.blurb` (VARCHAR(500))
+
+### `08_phenomenon_topics.sql`
+- Added `phenomena.offered` and an index for the composer list
+- Seeded the discipline topic list and marked those rows offered
+- Left any phenomenon a pebble still references; removed unreferenced topics that are not on that list

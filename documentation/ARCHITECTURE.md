@@ -1,7 +1,7 @@
 # Pebble Architecture
 
 ## Last Updated
-2026-09-09 (guest marketing polish; about-us snap layout)
+2026-10-04 (guest marketing hamburger and one-viewport snap slides)
 
 Keep this file as **current state**. Prefer a short dated note here, not a running changelog novel. Agent constitution: `AGENTS.md`. UI tokens: `tailwind.config.js`. Shared skills live in `.cursor/skills/` (synced from App Shell `cursor-templates`).
 
@@ -19,7 +19,7 @@ Local email/password auth is implemented. Google/Apple OAuth, Stripe, Firebase, 
 - **Backend**: Node.js, Express, Passport (local + Google/Apple placeholders), express-session + connect-pg-simple, Multer
 - **Database**: PostgreSQL (`pg`), raw SQL in `server/queries/`
 - **Storage**: Google Cloud Storage when `GOOGLE_CLOUD_STORAGE_BUCKET` is set; otherwise local `uploads/`
-- **Places / Maps**: `PlaceAutocomplete` uses Places API (New) `PlaceAutocompleteElement` (key from `GET /api/places/key`); used on Settings and pebble create/edit. Persists `addressComponents` as locality/admin/country for region filters. `/` (auth) loads the same Maps JavaScript API key for a 3D globe (`Map3DElement` + HTML `MarkerInteractiveElement` pins) of location pebbles and user profile pins with client-side overlap clustering by camera range. Desktop map route is always a split layout: left feed (viewport-filtered) + right globe. Search/author/region filters apply to both feed and map pins; active filters show dismissible chips (e.g. `@kbb ×`). Single pin clicks navigate to the pebble or profile; clusters only zoom — no “pebbles in this area” panel.
+- **Places / Maps**: `PlaceAutocomplete` uses Places API (New) `PlaceAutocompleteElement` (key from `GET /api/places/key`); used on Settings and pebble create/edit. Persists `addressComponents` as locality/admin/country for region filters. `/` (auth) loads the same Maps JavaScript API key for a 3D globe (`Map3DElement` + HTML `MarkerInteractiveElement` pins) of location pebbles and user profile pins with client-side overlap clustering by camera range. A cluster of two or more is a sandstone circle with the count. A single pebble is a blue circle with the glyph of its first field, or a plain blue dot when it has no field. A person pin keeps that person’s avatar. Zooming into a pebble cluster shows those field glyphs. Desktop map route is a split layout (left feed, newest in the current globe view, + right globe) with a corner control that expands the globe and hides the feed, and a recenter control. An expanded pin opens a preview (title, description, featured photo, tags); clusters only zoom. Mine limits feed and pins to the signed-in author. With no keyword, field, author, region, community-favorites, or media filter, the feed stays in the current camera view. Those filters search every visible pebble, including pins outside the camera, list the matches, and fly the globe so the pins are in frame. No matches says nothing matched. Active filters show dismissible chips (e.g. `@kbb ×`). Publishing opens Mine with that pebble’s preview at a camera range where the surrounding terrain is recognizable. Single pin clicks navigate to the pebble or profile; clusters only zoom — no “pebbles in this area” panel.
 - **Native**: Capacitor iOS only (`io.pebble.app` / `.qa` / `.app.dev`)
 - **Deploy**: Cloud Run (scale to zero) + Cloud SQL, Secret Manager
 
@@ -36,7 +36,7 @@ Components → helpers → routes → services → queries
 - `/register` — guest-only account creation, kept unlisted so accounts can be created by hand; marketing footer
 - `/map` — redirects to `/`
 - `/notifications` — in-app notification inbox (auth)
-- `/profile` — current user profile (settings + collections + new pebble entry points)
+- `/profile` — current user profile (gallery or rows, collection tiles, new pebble, map on Mine)
 - `/u/:username` — public/other profiles
 - `/settings` — edit profile + notification preferences (linked from profile, not sidebar)
 - `/collections`, `/collections/:id` — linked from profile
@@ -44,9 +44,9 @@ Components → helpers → routes → services → queries
 
 Standalone `Feed` route component remains in the codebase for potential mobile reuse but is not mounted on desktop.
 
-Layout: `ContentArea` — sticky left sidebar (authenticated only, hidden on `/how-it-works` and `/about-us`) + independently scrolling main content. Full-width pane for map, guest home, how it works, about us, guest login/register, notifications, profile, settings, and pebble detail. Unauthenticated marketing and auth screens include the shared Welcome footer.
+Layout: `ContentArea` — sticky left sidebar (authenticated only, hidden on `/how-it-works` and `/about-us`) + independently scrolling main content. Full-width pane for map, guest home, how it works, about us, guest login/register, notifications, profile, settings, and pebble detail. Guest marketing header shows Pebble, About Us, and How it Works inline from `lg` up; below `lg` those links sit in a hamburger panel. Sign In stays in the bar. Each guest marketing section is one `h-dvh` snap slide; overflow scrolls inside the slide. Login and register scroll on short screens with safe-area padding. Unauthenticated marketing and auth screens include the shared Welcome footer.
 
-Sidebar nav (authenticated): Map, Notifications, Profile, Sign out. Icons in `src/components/Icons/Icons.jsx`.
+Sidebar nav (authenticated): Map, Notifications, Profile. Tutorial (How it Works) sits above Sign out and is not a primary item. Icons in `src/components/Icons/Icons.jsx`.
 
 ## Auth
 
@@ -60,7 +60,7 @@ Sidebar nav (authenticated): Map, Notifications, Profile, Sign out. Icons in `sr
 ## API (core product)
 
 ### Users & orgs
-- `GET/PATCH /api/users/me`
+- `GET/PATCH /api/users/me` — patch may include `blurb` (trimmed, at most 500 characters; empty clears it). Shown under the follower counts on `/profile` and `/u/:username`. An empty blurb renders nothing.
 - `GET /api/users/map` — lean profile location pins
 - `GET /api/users/:username`
 - `GET /api/users/:username/followers`
@@ -78,25 +78,26 @@ Sidebar nav (authenticated): Map, Notifications, Profile, Sign out. Icons in `sr
 
 ### Taxonomy
 - `GET /api/fields`
-- `GET /api/phenomena?field_id=`
+- `GET /api/phenomena?field_id=` — offered topics only. A phenomenon already saved on a pebble still comes back on that pebble.
 
 ### Pebbles
-- `GET /api/pebbles/feed`
-- `GET /api/pebbles/search?q=&field_id=&author=&region=`
-- `GET /api/pebbles/map` — lean location pins (same visibility as feed; requires lat/lng; supports search filters)
+- `GET /api/pebbles/feed?favorites=&mine=`
+- `GET /api/pebbles/search?q=&field_id=&author=&region=&favorites=&mine=&has_photo=&has_video=&has_data=` — `favorites=1` keeps pebbles with likes, most likes first; `mine=1` keeps the viewer’s pebbles; media flags require a matching `pebble_media` type (`image`, `video`, `data`)
+- `GET /api/pebbles/map` — lean location pins (same visibility as feed; requires lat/lng; supports search filters, `favorites`, and `mine`)
 - `GET /api/pebbles/:id`
-- `POST /api/pebbles`
-- `PATCH /api/pebbles/:id`
-- `DELETE /api/pebbles/:id`
+- `GET /api/weather?lat=&lng=&date=&time=` — authenticated. Open-Meteo weather code for that pin and date (the hour when `time` is set, otherwise the day’s code), mapped to a weather chip. Returns `{ weather: null }` when the lookup fails. No API key.
+- `POST /api/pebbles` — body may include `status` (`draft` | `published`), `observedOn` (`YYYY-MM-DD`), `observedTime` (`HH:mm` or empty), `observedAt` (kept only when a legacy row’s clock time is unchanged), `weather`, `pinName`, `fieldIds`, `otherTags`, `resources`, `questions`, `mediaIds`. A date without a time stores `observed_on` and leaves `observed_at` null. Publish requires a title, stores `status: published`, and returns the author to the map on Mine with that pebble’s preview open. The pebble then leaves Drafts and appears in the profile gallery. If publish fails, the author stays on the form. Field notes are capped at 250 words. Drafts are excluded from feed, map, and search; only the author can open them. Profile pebbles sort by the observation, newest first. Keyword search matches `pin_name`, phenomenon names, and other-tag names. Other tags render as chips beside phenomena on the map feed, the pin preview, the pebble page, and profile rows. The published page shows media as five thumbnails; a photo or video opens larger and can be closed. A file that fails to load shows its name. Field notes, then further reading, then questions follow.
+- `PATCH /api/pebbles/:id` — same fields; clears hero, coordinates, media, tags, links, and questions when the client sends empty values
+- `DELETE /api/pebbles/:id` — author only. Drafts and published pebbles ask “Are you sure? Deletion is permanent.” before they are removed. A visitor does not see delete.
 - `POST /api/pebbles/:id/like`
 - `DELETE /api/pebbles/:id/like`
 
 ### Collections
 - `GET /api/collections`
-- `POST /api/collections`
+- `POST /api/collections` — body may include `coverImageUrl`. Profile shows collection tiles before unsorted pebbles.
 - `GET /api/collections/:id`
 - `PATCH /api/collections/:id`
-- `DELETE /api/collections/:id`
+- `DELETE /api/collections/:id` — owner only (403 for anyone else). Removes the collection and its membership rows. Pebbles stay. The owner confirms from the profile tile and from the collection page. Other people do not see delete.
 - `POST /api/collections/:id/invite`
 - `POST /api/collections/:id/accept`
 - `POST /api/collections/:id/pebbles`
@@ -117,7 +118,7 @@ Sidebar nav (authenticated): Map, Notifications, Profile, Sign out. Icons in `sr
 
 ## Privacy rules
 
-- Private pebbles: author only in feed/search/detail for others
+- Private pebbles are omitted from feed, search, map, and detail unless the viewer is the author or follows the author
 - `content_searchable = false`: excluded from search/discover; followers still see non-private pebbles
 - Blocks hide mutual content; blocking removes follows both ways
 - Private collections: owner + accepted members

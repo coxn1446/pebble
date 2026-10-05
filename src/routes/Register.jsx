@@ -28,8 +28,8 @@ const Register = () => {
   };
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <div className="flex flex-1 flex-col justify-center">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-4 pt-safe-top pb-safe-bottom">
         <AuthPageLayout title="Create account" subtitle="Stored in Postgres with a bcrypt password hash.">
           <RegisterForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
           <div className="my-6 flex items-center gap-3 text-xs text-pebble">

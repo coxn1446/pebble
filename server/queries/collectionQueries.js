@@ -4,14 +4,15 @@ const COLLECTION_FIELDS = `
   c.name,
   c.is_private,
   c.is_collaborative,
+  c.cover_image_url,
   c.created_at,
   c.updated_at
 `;
 
 const insert = `
-  INSERT INTO collections (owner_id, name, is_private, is_collaborative)
-  VALUES ($1, $2, $3, $4)
-  RETURNING collection_id, owner_id, name, is_private, is_collaborative, created_at, updated_at
+  INSERT INTO collections (owner_id, name, is_private, is_collaborative, cover_image_url)
+  VALUES ($1, $2, $3, $4, $5)
+  RETURNING collection_id, owner_id, name, is_private, is_collaborative, cover_image_url, created_at, updated_at
 `;
 
 const findById = `
@@ -21,10 +22,21 @@ const findById = `
 `;
 
 const listForUser = `
-  SELECT DISTINCT ${COLLECTION_FIELDS}
+  SELECT ${COLLECTION_FIELDS},
+    (
+      SELECT COALESCE(json_agg(cp.pebble_id), '[]'::json)
+      FROM collection_pebbles cp
+      WHERE cp.collection_id = c.collection_id
+    ) AS pebble_ids
   FROM collections c
-  LEFT JOIN collection_members m ON m.collection_id = c.collection_id AND m.user_id = $1 AND m.status = 'accepted'
-  WHERE c.owner_id = $1 OR m.user_id = $1
+  WHERE c.owner_id = $1
+    OR EXISTS (
+      SELECT 1
+      FROM collection_members m
+      WHERE m.collection_id = c.collection_id
+        AND m.user_id = $1
+        AND m.status = 'accepted'
+    )
   ORDER BY c.updated_at DESC
 `;
 
@@ -34,9 +46,10 @@ const update = `
     name = COALESCE($2, name),
     is_private = COALESCE($3, is_private),
     is_collaborative = COALESCE($4, is_collaborative),
+    cover_image_url = COALESCE($6, cover_image_url),
     updated_at = NOW()
   WHERE collection_id = $1 AND owner_id = $5
-  RETURNING collection_id, owner_id, name, is_private, is_collaborative, created_at, updated_at
+  RETURNING collection_id, owner_id, name, is_private, is_collaborative, cover_image_url, created_at, updated_at
 `;
 
 const remove = `

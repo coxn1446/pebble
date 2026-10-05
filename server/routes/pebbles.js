@@ -9,7 +9,10 @@ module.exports = () => {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
       }
-      const pebbles = await pebbleService.getFeed(req.user.user_id);
+      const pebbles = await pebbleService.getFeed(req.user.user_id, {
+        favorites: req.query.favorites === '1' || req.query.favorites === 'true',
+        mine: req.query.mine === '1' || req.query.mine === 'true',
+      });
       return res.json({ pebbles });
     } catch (err) {
       return next(err);
@@ -25,6 +28,11 @@ module.exports = () => {
           fieldId: req.query.field_id,
           author: req.query.author,
           region: req.query.region,
+          favorites: req.query.favorites === '1' || req.query.favorites === 'true',
+          mine: req.query.mine === '1' || req.query.mine === 'true',
+          hasPhoto: req.query.has_photo === '1' || req.query.has_photo === 'true',
+          hasVideo: req.query.has_video === '1' || req.query.has_video === 'true',
+          hasData: req.query.has_data === '1' || req.query.has_data === 'true',
         },
         viewerId
       );
@@ -44,6 +52,11 @@ module.exports = () => {
         fieldId: req.query.field_id,
         author: req.query.author,
         region: req.query.region,
+        favorites: req.query.favorites === '1' || req.query.favorites === 'true',
+        mine: req.query.mine === '1' || req.query.mine === 'true',
+        hasPhoto: req.query.has_photo === '1' || req.query.has_photo === 'true',
+        hasVideo: req.query.has_video === '1' || req.query.has_video === 'true',
+        hasData: req.query.has_data === '1' || req.query.has_data === 'true',
       });
       return res.json({ pebbles });
     } catch (err) {
@@ -80,7 +93,17 @@ module.exports = () => {
         heroImageUrl: body.heroImageUrl,
         fieldNotes: body.fieldNotes,
         isPrivate: body.isPrivate,
+        status: body.status,
+        observedOn: body.observedOn,
+        observedTime: body.observedTime,
+        observedAt: body.observedAt,
+        weather: body.weather,
+        pinName: body.pinName,
         phenomenonIds: body.phenomenonIds,
+        fieldIds: body.fieldIds,
+        otherTags: body.otherTags,
+        resources: body.resources,
+        questions: body.questions,
         mediaIds: body.mediaIds,
       });
       return res.status(201).json({ pebble });
@@ -108,7 +131,18 @@ module.exports = () => {
         heroImageUrl: body.heroImageUrl,
         fieldNotes: body.fieldNotes,
         isPrivate: body.isPrivate,
+        status: body.status,
+        observedOn: body.observedOn,
+        observedTime: body.observedTime,
+        observedAt: body.observedAt,
+        weather: body.weather,
+        pinName: body.pinName,
         phenomenonIds: body.phenomenonIds,
+        fieldIds: body.fieldIds,
+        otherTags: body.otherTags,
+        resources: body.resources,
+        questions: body.questions,
+        mediaIds: body.mediaIds,
       });
       return res.json({ pebble });
     } catch (err) {
