@@ -12,6 +12,8 @@ jest.mock('fs', () => ({
   existsSync: jest.fn(() => true),
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
+  copyFileSync: jest.fn(),
+  unlinkSync: jest.fn(),
 }));
 
 const fs = require('fs');
@@ -49,5 +51,30 @@ describe('uploadService media limits', () => {
     expect(media.media_type).toBe('video');
     expect(fs.writeFileSync).toHaveBeenCalled();
     expect(query).toHaveBeenCalled();
+  });
+
+  test('treats a quicktime movie as video even when the browser omits a type', () => {
+    expect(uploadService.inferMediaType('application/octet-stream', 'field.mov')).toBe('video');
+    expect(uploadService.resolveMediaType(
+      { mimetype: 'application/octet-stream', originalname: 'field.mov' },
+      'image'
+    )).toBe('video');
+  });
+
+  test('rejects a file over 200 MB', async () => {
+    const video = file({ name: 'field.mp4', type: 'video/mp4', size: 201 * MB });
+    await expect(uploadService.uploadBuffer(video, 'video')).rejects.toMatchObject({ status: 413 });
+    expect(fs.writeFileSync).not.toHaveBeenCalled();
+  });
+
+  test('skips direct upload when storage is not configured', async () => {
+    await expect(
+      uploadService.createUploadSession({
+        filename: 'field.mp4',
+        contentType: 'video/mp4',
+        mediaType: 'video',
+        size: 40 * MB,
+      })
+    ).resolves.toEqual({ direct: false });
   });
 });

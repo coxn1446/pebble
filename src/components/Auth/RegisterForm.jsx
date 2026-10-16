@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 const inputClass =
-  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-pebble focus:border-accent';
+  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-pebble focus:border-accent';
 
 const RegisterForm = ({ onSubmit, isSubmitting }) => {
   const [email, setEmail] = useState('');

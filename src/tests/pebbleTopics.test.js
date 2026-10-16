@@ -274,11 +274,14 @@ describe('phenomenon topics', () => {
     query.mockImplementation(async (sql) => {
       const text = String(sql);
       if (text.includes('FROM pebble_other_tags')) {
-        return { rows: [{ other_tag_id: 8, name: 'nocturnal hunter' }] };
+        return { rows: [{ pebble_id: 21, other_tag_id: 8, name: 'nocturnal hunter' }] };
+      }
+      if (text.includes('FROM pebble_phenomena') && text.includes('COUNT')) {
+        return { rows: [{ count: 1 }] };
       }
       if (text.includes('FROM pebble_phenomena')) {
         return {
-          rows: [{ phenomenon_id: 40, name: 'photosynthesis', field_id: 2, field_name: 'Biology' }],
+          rows: [{ pebble_id: 21, phenomenon_id: 40, name: 'photosynthesis', field_id: 2, field_name: 'Biology' }],
         };
       }
       if (text.includes('FROM pebbles p')) {

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PebbleMap from '../components/Map/PebbleMap';
 import { __resetGooglePlacesLoaderForTests } from '../helpers/placesHelpers';
-import { GLOBE_CAMERA_RANGE, PLACE_CAMERA_RANGE } from '../helpers/mapHelpers';
+import { CONTINENT_CAMERA_RANGE, GLOBE_CAMERA_RANGE, PLACE_CAMERA_RANGE } from '../helpers/mapHelpers';
 
 jest.mock('../helpers/placesHelpers', () => {
   const actual = jest.requireActual('../helpers/placesHelpers');
@@ -421,6 +421,40 @@ describe('PebbleMap', () => {
           }),
         })
       );
+    });
+  });
+
+  test('asks for the current location and centers there', async () => {
+    const getCurrentPosition = jest.fn((success) => {
+      success({ coords: { latitude: 43.66, longitude: -70.25 } });
+    });
+    const original = navigator.geolocation;
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition },
+    });
+
+    const { google, mapInstances } = createGoogleMaps3dMock();
+    fetchPlacesApiKey.mockResolvedValue({ key: 'test-key', configured: true });
+    loadGoogleMaps3dApi.mockResolvedValue(google);
+
+    renderMap({ pebbles: [portland] });
+
+    await waitFor(() => {
+      expect(getCurrentPosition).toHaveBeenCalled();
+      expect(mapInstances[0].flyCameraTo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          endCamera: expect.objectContaining({
+            center: expect.objectContaining({ lat: 43.66, lng: -70.25 }),
+            range: CONTINENT_CAMERA_RANGE,
+          }),
+        })
+      );
+    });
+
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: original,
     });
   });
 });

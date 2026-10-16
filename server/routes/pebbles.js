@@ -33,6 +33,8 @@ module.exports = () => {
           hasPhoto: req.query.has_photo === '1' || req.query.has_photo === 'true',
           hasVideo: req.query.has_video === '1' || req.query.has_video === 'true',
           hasData: req.query.has_data === '1' || req.query.has_data === 'true',
+          phenomenonId: req.query.phenomenon_id,
+          notes: req.query.notes,
         },
         viewerId
       );
@@ -57,6 +59,8 @@ module.exports = () => {
         hasPhoto: req.query.has_photo === '1' || req.query.has_photo === 'true',
         hasVideo: req.query.has_video === '1' || req.query.has_video === 'true',
         hasData: req.query.has_data === '1' || req.query.has_data === 'true',
+        phenomenonId: req.query.phenomenon_id,
+        notes: req.query.notes,
       });
       return res.json({ pebbles });
     } catch (err) {
@@ -105,6 +109,7 @@ module.exports = () => {
         resources: body.resources,
         questions: body.questions,
         mediaIds: body.mediaIds,
+        media: body.media,
       });
       return res.status(201).json({ pebble });
     } catch (err) {
@@ -143,6 +148,7 @@ module.exports = () => {
         resources: body.resources,
         questions: body.questions,
         mediaIds: body.mediaIds,
+        media: body.media,
       });
       return res.json({ pebble });
     } catch (err) {

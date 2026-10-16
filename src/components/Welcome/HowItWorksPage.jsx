@@ -19,6 +19,8 @@ import {
   WelcomeHeader,
   WelcomeFooter,
   WelcomeScroller,
+  WelcomeHCarousel,
+  WelcomeHSlide,
   SectionHeader,
   sectionClassName,
 } from './WelcomeShared';
@@ -137,18 +139,27 @@ const EXPLORE_ROWS = [
 const HowItWorksSection = () => (
   <section id="how-it-works" className={`${sectionClassName} relative overflow-hidden`}>
     <WelcomeHeader />
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-36 pb-8 md:px-8">
-      <div className="mx-auto w-full max-w-6xl">
-        <SectionHeader label="Mechanics" title="How it Works" compact />
+    <div
+      data-testid="how-it-works-stage"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-24 pb-8 md:overflow-y-auto md:px-8 md:pt-36"
+    >
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col">
+        <SectionHeader
+          label="Mechanics"
+          title="How it Works"
+          compact
+          className="mb-3 shrink-0 md:mb-5"
+        />
 
-        <div
-          data-testid="how-it-works-columns"
-          className="grid w-full grid-cols-1 gap-0 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0 md:divide-ink"
+        <WelcomeHCarousel
+          testId="how-it-works-columns"
+          label="Collect, Connect, and Create"
+          className="min-h-0 flex-1 gap-0 md:grid md:flex-none md:snap-none md:grid-cols-3 md:overflow-visible md:divide-x md:divide-y-0 md:divide-ink"
         >
           {HOW_IT_WORKS_STEPS.map((step) => (
-            <div
+            <WelcomeHSlide
               key={step.title}
-              className="flex flex-col text-center md:row-span-4 md:grid md:grid-rows-subgrid"
+              className="justify-center text-center md:h-auto md:w-auto md:shrink md:justify-start md:row-span-4 md:grid md:grid-rows-subgrid"
             >
               <h3 className="mb-3 px-4 font-display text-2xl font-medium text-ink md:text-3xl">
                 {step.title}
@@ -156,22 +167,22 @@ const HowItWorksSection = () => (
               <div className="flex h-32 w-full items-end justify-center px-3 md:h-44 lg:h-56">
                 <img src={step.src} alt={step.alt} className="max-h-full w-full object-contain object-bottom" />
               </div>
-              <p className="flex h-full items-center px-4">
+              <p className="flex items-center px-4 md:h-full">
                 <span className="w-full text-sm font-semibold leading-snug text-ink">{step.paragraphs[0]}</span>
               </p>
-              <p className="flex h-full items-start px-4">
+              <p className="mt-3 flex items-start px-4 md:mt-0 md:h-full">
                 <span className="w-full text-sm leading-snug text-ink/70">{step.paragraphs[1]}</span>
               </p>
-            </div>
+            </WelcomeHSlide>
           ))}
-        </div>
+        </WelcomeHCarousel>
       </div>
     </div>
   </section>
 );
 
 const ExploreCell = ({ icon, iconAlt, image, imageAlt, children }) => (
-  <div className="flex h-full items-center">
+  <div className="flex min-h-0 flex-1 items-center md:h-full md:flex-none">
     <div className="flex items-center gap-3">
       {image ? (
         <img
@@ -192,8 +203,8 @@ const ExplorePebblesSection = () => (
     id="explore-pebbles"
     className="flex h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface"
   >
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-16 md:px-8 md:pt-20">
-      <div className="mx-auto flex w-full max-w-6xl shrink-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-0 pt-6 md:overflow-y-auto md:px-8 md:pt-20">
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col md:flex-none">
         <div className="hidden shrink-0 grid-cols-3 gap-6 md:grid">
           {EXPLORE_HEADERS.map(({ label, tone }) => (
             <p
@@ -205,12 +216,16 @@ const ExplorePebblesSection = () => (
           ))}
         </div>
 
-        <div className="mt-3 flex flex-col">
+        <WelcomeHCarousel
+          testId="explore-carousel"
+          label="How it was, Pebble, and how it can be"
+          className="mt-0 min-h-0 flex-1 md:mt-3 md:flex md:flex-none md:flex-col md:snap-none md:overflow-visible"
+        >
           {EXPLORE_ROWS.map((row, index) => (
-            <div
+            <WelcomeHSlide
               key={row.pebble.standard}
-              className={`grid shrink-0 grid-cols-1 items-stretch gap-3 py-3 md:grid-cols-3 md:gap-6 ${
-                index === 0 ? '' : 'border-t border-border'
+              className={`justify-center gap-4 px-4 md:grid md:h-auto md:w-full md:shrink md:grid-cols-3 md:items-stretch md:gap-6 md:px-0 md:py-3 ${
+                index === 0 ? '' : 'md:border-t md:border-border'
               }`}
             >
               <ExploreCell icon={row.was.icon} iconAlt={row.was.iconAlt}>
@@ -232,12 +247,11 @@ const ExplorePebblesSection = () => (
                 </span>
                 {row.canBe.text}
               </ExploreCell>
-            </div>
+            </WelcomeHSlide>
           ))}
-        </div>
-
+        </WelcomeHCarousel>
       </div>
-      <div className="flex w-full flex-1 items-center justify-center px-4 py-6">
+      <div className="flex w-full shrink-0 items-center justify-center px-4 py-6 md:flex-1">
         <Link
           to="/login"
           className="inline-flex items-center justify-center rounded-xl bg-ink px-10 py-3 text-lg font-semibold text-white transition hover:bg-ocean"

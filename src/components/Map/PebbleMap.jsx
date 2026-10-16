@@ -4,7 +4,9 @@ import { getDefaultAvatarPinClass } from '../../helpers/avatarHelpers';
 import { fetchPlacesApiKey, loadGoogleMaps3dApi } from '../../helpers/placesHelpers';
 import {
   clusterMapPins,
+  CONTINENT_CAMERA_RANGE,
   GLOBE_CAMERA_RANGE,
+  PLACE_CAMERA_RANGE,
   rangeForPins,
   viewportBoundsFromCamera,
 } from '../../helpers/mapHelpers';
@@ -155,6 +157,7 @@ const PebbleMap = ({
 }) => {
   const hostRef = useRef(null);
   const mapRef = useRef(null);
+  const userHomeRef = useRef(null);
   const markersByKeyRef = useRef(new Map());
   const maps3dRef = useRef(null);
   const pebblesRef = useRef(pebbles);
@@ -213,6 +216,44 @@ const PebbleMap = ({
       performance.now() + ms
     );
   };
+
+  const flyCamera = (map, camera) => {
+    if (!map) return;
+    if (typeof map.flyCameraTo === 'function') {
+      map.flyCameraTo({ endCamera: camera, durationMillis: FLY_DURATION_MS });
+      return;
+    }
+    map.center = camera.center;
+    map.range = camera.range;
+    map.tilt = camera.tilt;
+    map.heading = camera.heading;
+  };
+
+  useEffect(() => {
+    if (!navigator.geolocation?.getCurrentPosition) return undefined;
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) return;
+        const lat = Number(position.coords.latitude);
+        const lng = Number(position.coords.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const center = { lat, lng, altitude: 0 };
+        userHomeRef.current = center;
+        const map = mapRef.current;
+        if (!map) return;
+        beginSuppress(FLY_DURATION_MS + 80);
+        flyCamera(map, { center, range: CONTINENT_CAMERA_RANGE, tilt: 0, heading: 0 });
+      },
+      () => {},
+      { enableHighAccuracy: false, maximumAge: 60000, timeout: 8000 }
+    );
+    return () => {
+      cancelled = true;
+    };
+    // Ask once when the map mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const schedulePendingWake = () => {
     if (pendingWakeRef.current) window.clearTimeout(pendingWakeRef.current);
@@ -516,6 +557,14 @@ const PebbleMap = ({
         map.classList.add('pebble-map-3d');
         hostRef.current.replaceChildren(map);
         mapRef.current = map;
+        if (userHomeRef.current) {
+          flyCamera(map, {
+            center: userHomeRef.current,
+            range: CONTINENT_CAMERA_RANGE,
+            tilt: 0,
+            heading: 0,
+          });
+        }
 
         map.addEventListener('gmp-rangechange', scheduleSync);
         map.addEventListener('gmp-centerchange', scheduleSync);
@@ -601,20 +650,21 @@ const PebbleMap = ({
     const map = mapRef.current;
     if (!map) return;
     beginSuppress(FLY_DURATION_MS + 80);
-    const home = {
-      center: GLOBE_CENTER,
-      range: GLOBE_CAMERA_RANGE,
-      tilt: 0,
-      heading: 0,
-    };
-    if (typeof map.flyCameraTo === 'function') {
-      map.flyCameraTo({ endCamera: home, durationMillis: FLY_DURATION_MS });
-    } else {
-      map.center = home.center;
-      map.range = home.range;
-      map.tilt = 0;
-      map.heading = 0;
-    }
+    const userCenter = userHomeRef.current;
+    const home = userCenter
+      ? {
+          center: userCenter,
+          range: CONTINENT_CAMERA_RANGE,
+          tilt: 0,
+          heading: 0,
+        }
+      : {
+          center: GLOBE_CENTER,
+          range: GLOBE_CAMERA_RANGE,
+          tilt: 0,
+          heading: 0,
+        };
+    flyCamera(map, home);
     const timer = window.setTimeout(emitViewport, FLY_DURATION_MS + 50);
     return () => window.clearTimeout(timer);
     // resetSignal is the only trigger

@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE,
   username VARCHAR(255) UNIQUE,
   password VARCHAR(255),
-  auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
-  provider_id VARCHAR(255),
+  google_id VARCHAR(255),
+  apple_id VARCHAR(255),
   display_name VARCHAR(255),
   account_type VARCHAR(20) NOT NULL DEFAULT 'personal'
     CHECK (account_type IN ('personal', 'organization')),
@@ -64,9 +64,45 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_pic_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS blurb VARCHAR(500);
 ALTER TABLE users DROP COLUMN IF EXISTS is_moderator;
 
-CREATE UNIQUE INDEX IF NOT EXISTS users_provider_uidx
-  ON users (auth_provider, provider_id)
-  WHERE provider_id IS NOT NULL;
+-- Older shells stored a single auth_provider + provider_id. Move those subjects
+-- onto google_id / apple_id so one account can keep a password and both providers.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'users'
+      AND column_name = 'auth_provider'
+  ) THEN
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_id VARCHAR(255);
+
+    UPDATE users
+    SET google_id = provider_id
+    WHERE auth_provider = 'google'
+      AND provider_id IS NOT NULL
+      AND google_id IS NULL;
+
+    UPDATE users
+    SET apple_id = provider_id
+    WHERE auth_provider = 'apple'
+      AND provider_id IS NOT NULL
+      AND apple_id IS NULL;
+
+    DROP INDEX IF EXISTS users_provider_uidx;
+    ALTER TABLE users DROP COLUMN provider_id;
+    ALTER TABLE users DROP COLUMN auth_provider;
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_uidx
+  ON users (google_id)
+  WHERE google_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_apple_id_uidx
+  ON users (apple_id)
+  WHERE apple_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS fields (
   field_id SERIAL PRIMARY KEY,
@@ -159,6 +195,11 @@ CREATE TABLE IF NOT EXISTS pebble_media (
   media_type VARCHAR(50) NOT NULL
     CHECK (media_type IN ('image', 'video', 'audio', 'data', 'attachment', 'graph')),
   filename VARCHAR(512),
+  title VARCHAR(160),
+  caption TEXT,
+  preview_x NUMERIC(5,2) NOT NULL DEFAULT 50,
+  preview_y NUMERIC(5,2) NOT NULL DEFAULT 50,
+  preview_scale NUMERIC(4,2) NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

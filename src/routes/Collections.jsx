@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { createCollection, fetchCollections } from '../helpers/collectionHelpers';
-
-const inputClass =
-  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-accent';
+import NewCollectionForm from '../components/Collections/NewCollectionForm';
+import { fetchCollections } from '../helpers/collectionHelpers';
 
 const Collections = () => {
   const [collections, setCollections] = useState([]);
-  const [name, setName] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [isCollaborative, setIsCollaborative] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   const load = async () => {
     try {
@@ -26,49 +22,25 @@ const Collections = () => {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold text-ink">Collections</h1>
-        <p className="text-sm text-muted">Save pebbles for later. Invite collaborators when needed.</p>
-      </div>
-      <form
-        className="space-y-3 rounded-2xl border border-border bg-surface p-4"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          try {
-            await createCollection({ name, isPrivate, isCollaborative });
-            setName('');
-            toast.success('Collection created');
-            load();
-          } catch (err) {
-            toast.error(err.message);
-          }
-        }}
-      >
-        <label className="block">
-          <span className="mb-1.5 block text-sm text-muted">Name</span>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />
-          Private
-        </label>
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            checked={isCollaborative}
-            onChange={(e) => setIsCollaborative(e.target.checked)}
-          />
-          Collaborate
-        </label>
-        <button type="submit" className="rounded-2xl bg-accent px-3 py-2 text-sm text-white hover:bg-accent-hover">
-          Create collection
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="rounded-2xl bg-accent px-3 py-2 text-sm text-white hover:bg-accent-hover"
+        >
+          New collection
         </button>
-      </form>
+      </div>
+      {showForm ? (
+        <NewCollectionForm
+          onCancel={() => setShowForm(false)}
+          onCreated={() => {
+            setShowForm(false);
+            load();
+          }}
+        />
+      ) : null}
       <div className="space-y-3">
         {collections.map((c) => (
           <Link

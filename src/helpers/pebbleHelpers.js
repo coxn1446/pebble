@@ -19,6 +19,12 @@ const buildSearchParams = (filters = {}) => {
   if (filters.hasPhoto) params.set('has_photo', '1');
   if (filters.hasVideo) params.set('has_video', '1');
   if (filters.hasData) params.set('has_data', '1');
+  if (filters.phenomenonId) params.set('phenomenon_id', String(filters.phenomenonId));
+  []
+    .concat(filters.notes || [])
+    .map((term) => String(term || '').trim())
+    .filter(Boolean)
+    .forEach((term) => params.append('notes', term));
   return params;
 };
 

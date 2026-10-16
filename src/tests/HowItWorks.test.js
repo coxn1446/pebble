@@ -47,7 +47,7 @@ describe('HowItWorks', () => {
     const columns = screen.getByTestId('how-it-works-columns');
     expect(columns).toHaveClass('w-full', 'gap-0', 'md:divide-x', 'md:divide-ink');
     expect(columns).not.toHaveClass('max-w-4xl');
-    expect(columns.parentElement).toHaveClass('max-w-6xl');
+    expect(columns.parentElement.parentElement).toHaveClass('max-w-6xl');
     expect(document.getElementById('explore-pebbles').querySelector('.max-w-6xl')).toBeTruthy();
     expect(screen.getByText(/observations are shared as 'pebbles'/i).parentElement.parentElement).toHaveClass(
       'md:grid-rows-subgrid',
@@ -55,13 +55,24 @@ describe('HowItWorks', () => {
     );
     expect(screen.getByText(/professionals create a pebble account/i).parentElement).toHaveClass(
       'flex',
-      'h-full',
+      'md:h-full',
       'items-center'
     );
     expect(screen.getByText(/observations are shared as 'pebbles'/i).parentElement).toHaveClass(
       'items-start'
     );
-    expect(document.getElementById('how-it-works').querySelector('.pt-36')).toBeTruthy();
+    const stage = screen.getByTestId('how-it-works-stage');
+    expect(stage).toHaveClass('pt-24', 'md:pt-36', 'overflow-hidden');
+    expect(columns).toHaveClass('snap-x', 'snap-mandatory', 'md:grid', 'md:snap-none');
+    expect(columns.children).toHaveLength(3);
+    const columnDots = screen.getByTestId('how-it-works-columns-dots');
+    expect(columnDots).toHaveClass('md:hidden');
+    expect(columnDots.querySelectorAll('li')).toHaveLength(3);
+    expect(columnDots.querySelector('[aria-current="true"]')).toHaveClass('bg-ink');
+    expect(columnDots.querySelector('[aria-label="Slide 2 of 3"]')).toHaveClass('bg-pebble');
+    Array.from(columns.children).forEach((slide) => {
+      expect(slide).toHaveClass('w-full', 'snap-start', 'shrink-0');
+    });
   });
 
   test('renders explore pebbles comparison and CTA', () => {
@@ -106,7 +117,18 @@ describe('HowItWorks', () => {
     expect(screen.getByRole('img', { name: 'Rocky coastline on Madeira' })).toBeInTheDocument();
     const exploreLink = screen.getByRole('link', { name: 'Explore Pebbles' });
     expect(exploreLink).toHaveAttribute('href', '/login');
-    expect(exploreLink.parentElement).toHaveClass('flex-1', 'items-center', 'justify-center');
+    expect(exploreLink.parentElement).toHaveClass('shrink-0', 'md:flex-1', 'items-center', 'justify-center');
+    const exploreCarousel = screen.getByTestId('explore-carousel');
+    expect(exploreCarousel).toHaveClass('snap-x', 'snap-mandatory', 'md:flex-col', 'md:snap-none');
+    expect(exploreCarousel.children).toHaveLength(4);
+    const exploreDots = screen.getByTestId('explore-carousel-dots');
+    expect(exploreDots).toHaveClass('md:hidden');
+    expect(exploreDots.querySelectorAll('li')).toHaveLength(4);
+    expect(exploreDots.querySelector('[aria-current="true"]')).toHaveClass('bg-ink');
+    expect(exploreDots.querySelector('[aria-label="Slide 2 of 4"]')).toHaveClass('bg-pebble');
+    Array.from(exploreCarousel.children).forEach((slide) => {
+      expect(slide).toHaveClass('w-full', 'snap-start', 'flex-col', 'md:grid', 'md:grid-cols-3');
+    });
 
     const columnHeaders = ['How it was', 'Pebble', 'How it can be']
       .map((label) => screen.getAllByText(label).find((el) => el.classList.contains('w-full')))
@@ -155,7 +177,7 @@ describe('HowItWorks', () => {
     });
 
     expect(explore.querySelector('.border-t-2')).toBeNull();
-    expect(explore.querySelectorAll('.border-t.border-border').length).toBe(3);
+    expect(explore.querySelectorAll('.md\\:border-t.md\\:border-border').length).toBe(3);
   });
 
   test('uses snap scrolling and routes header links', () => {

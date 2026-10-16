@@ -1,7 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fieldIconForName, SketchGlobeIcon } from '../Icons/Icons';
+import { featuredMedia } from '../../helpers/mediaPreview';
 import { formatObserved, pinLabel } from '../../helpers/pebbleHelpers';
+import { PreviewImage } from './MediaFrame';
+import { rememberScreen } from '../../helpers/screenReturn';
 
 const primaryFieldName = (pebble) => {
   const names = (pebble?.phenomena || []).map((ph) => ph.field_name).filter(Boolean);
@@ -23,10 +26,14 @@ const PebbleCard = ({ pebble, illustration = false }) => {
     <article
       role="link"
       tabIndex={0}
-      onClick={() => navigate(`/pebbles/${pebble.pebble_id}`)}
+      onClick={() => {
+        rememberScreen();
+        navigate(`/pebbles/${pebble.pebble_id}`);
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
+          rememberScreen();
           navigate(`/pebbles/${pebble.pebble_id}`);
         }
       }}
@@ -86,11 +93,7 @@ const PebbleCard = ({ pebble, illustration = false }) => {
             data-testid="pebble-hero-thumb"
             className="aspect-square h-full shrink-0 overflow-hidden rounded-2xl border border-border"
           >
-            <img
-              src={pebble.hero_image_url}
-              alt=""
-              className="h-full w-full object-cover"
-            />
+            <PreviewImage item={featuredMedia(pebble)} className="h-full w-full" />
           </div>
         ) : null}
       </div>

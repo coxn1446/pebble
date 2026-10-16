@@ -5,6 +5,12 @@ export const MAP_PIN_COLOR = '#2563EB';
 export const GLOBE_CAMERA_RANGE = 18_000_000;
 
 /**
+ * Camera range (meters) centered on the device that still shows a continent.
+ * Nearer than the full-Earth globe, wider than a single place.
+ */
+export const CONTINENT_CAMERA_RANGE = 8_000_000;
+
+/**
  * Closest camera range (meters) that still shows a pin with recognizable terrain.
  * Nearer ranges on Map3DElement drape a ground photo across the globe.
  */

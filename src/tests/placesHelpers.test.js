@@ -1,5 +1,6 @@
 import {
   __resetGooglePlacesLoaderForTests,
+  droppedPin,
   emptyPlace,
   loadGoogleMaps3dApi,
   loadGoogleMapsApi,
@@ -12,6 +13,19 @@ describe('placesHelpers', () => {
   beforeEach(() => {
     __resetGooglePlacesLoaderForTests();
     delete window.google;
+  });
+
+  test('droppedPin keeps coordinates and clears the location name', () => {
+    expect(droppedPin(-51.2, -60.1)).toEqual({
+      placeId: null,
+      placeName: '',
+      placeLat: -51.2,
+      placeLng: -60.1,
+      placeLocality: null,
+      placeAdminArea: null,
+      placeCountry: null,
+      manualPin: true,
+    });
   });
 
   test('emptyPlace clears structured fields', () => {

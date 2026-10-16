@@ -5,6 +5,19 @@ const pebbleService = require('../services/pebbleService');
 module.exports = () => {
   const router = Router();
 
+  router.get('/me/profile', async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated || !req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      const user = await userService.getMe(req.user.user_id);
+      const pebbles = await pebbleService.listByAuthor(user.user_id, user.user_id);
+      return res.json({ user, pebbles });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   router.get('/me', async (req, res, next) => {
     try {
       if (!req.isAuthenticated || !req.isAuthenticated()) {

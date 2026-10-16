@@ -1,22 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearUser, selectUser } from '../../store/auth.reducer';
 import { logout } from '../../helpers/authHelpers';
 import { fetchNotifications } from '../../helpers/notificationHelpers';
+import { useMobileWelcome } from '../Welcome/WelcomeShared';
 import BrandMark from '../Brand/BrandMark';
+import NewCollectionForm from '../Collections/NewCollectionForm';
+import Modal from '../Modal/Modal';
 import UserAvatar from '../Profile/UserAvatar';
-import { BellIcon, MapIcon } from '../Icons/Icons';
+import { BellIcon, MapIcon, PlusIcon } from '../Icons/Icons';
 
 const linkClass = ({ isActive }) =>
   `flex items-center gap-2 rounded-2xl px-3 py-2 text-sm transition ${
     isActive ? 'bg-background font-medium text-ink' : 'text-muted hover:bg-background hover:text-ink'
   }`;
 
+const tabClass = ({ isActive }) =>
+  `flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs ${
+    isActive ? 'font-medium text-ink' : 'text-muted'
+  }`;
+
+const UnreadBadge = ({ count }) =>
+  count > 0 ? (
+    <span className="rounded-xl bg-accent px-1.5 py-0.5 text-xs font-medium text-white">
+      {count > 99 ? '99+' : count}
+    </span>
+  ) : null;
+
 const Nav = () => {
   const dispatch = useDispatch();
+  const isMobile = useMobileWelcome();
   const user = useSelector(selectUser);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showCollection, setShowCollection] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -37,27 +55,116 @@ const Nav = () => {
     dispatch(clearUser());
   };
 
+  const mapLink = (
+    <NavLink to="/" end className={isMobile ? tabClass : linkClass}>
+      <MapIcon className={isMobile ? 'h-5 w-5 shrink-0' : 'h-4 w-4 shrink-0'} />
+      Map
+    </NavLink>
+  );
+
+  const notificationsLink = (
+    <NavLink to="/notifications" className={isMobile ? tabClass : linkClass}>
+      <span className={isMobile ? 'relative' : 'contents'}>
+        <BellIcon className={isMobile ? 'h-5 w-5 shrink-0' : 'h-4 w-4 shrink-0'} />
+        {isMobile ? (
+          <span className="absolute -right-3 -top-1">
+            <UnreadBadge count={unreadCount} />
+          </span>
+        ) : null}
+      </span>
+      {isMobile ? (
+        'Notifications'
+      ) : (
+        <>
+          <span className="flex-1">Notifications</span>
+          <UnreadBadge count={unreadCount} />
+        </>
+      )}
+    </NavLink>
+  );
+
+  const profileLink = (
+    <NavLink to="/profile" className={isMobile ? tabClass : linkClass}>
+      <UserAvatar user={user} className={isMobile ? 'h-5 w-5' : 'h-6 w-6'} />
+      Profile
+    </NavLink>
+  );
+
+  const createButton = (
+    <button
+      type="button"
+      onClick={() => setShowCreate(true)}
+      className="flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted"
+    >
+      <PlusIcon className="h-5 w-5 shrink-0" />
+      Create
+    </button>
+  );
+
+  const createDialogs = (
+    <>
+      {showCreate ? (
+        <Modal open title="Create" testId="create-modal" onClose={() => setShowCreate(false)}>
+          <div className="flex flex-col gap-2">
+            <Link
+              to="/pebbles/new"
+              onClick={() => setShowCreate(false)}
+              className="rounded-2xl bg-accent px-3 py-2 text-center text-sm font-medium text-white hover:bg-accent-hover"
+            >
+              Pebble
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreate(false);
+                setShowCollection(true);
+              }}
+              className="rounded-2xl border border-border px-3 py-2 text-center text-sm text-ink"
+            >
+              Collection
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+      {showCollection ? (
+        <NewCollectionForm
+          onCancel={() => setShowCollection(false)}
+          onCreated={() => {
+            setShowCollection(false);
+            window.dispatchEvent(new Event('pebble-collections-changed'));
+          }}
+        />
+      ) : null}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <nav
+          data-testid="mobile-tab-bar"
+          aria-label="Primary"
+          className="shrink-0 border-t border-border bg-surface/95 pb-safe-bottom backdrop-blur-md"
+        >
+          <div className="grid grid-cols-4">
+            {mapLink}
+            {notificationsLink}
+            {createButton}
+            {profileLink}
+          </div>
+        </nav>
+        {createDialogs}
+      </>
+    );
+  }
+
   return (
     <aside className="flex h-full min-h-0 w-56 shrink-0 flex-col overflow-y-auto border-r border-border/80 bg-surface/80 px-4 py-6 backdrop-blur-md">
       <BrandMark size="sm" to="/" />
       <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1">
-        <NavLink to="/" end className={linkClass}>
-          <MapIcon className="h-4 w-4 shrink-0" />
-          Map
-        </NavLink>
-        <NavLink to="/notifications" className={linkClass}>
-          <BellIcon className="h-4 w-4 shrink-0" />
-          <span className="flex-1">Notifications</span>
-          {unreadCount > 0 ? (
-            <span className="rounded-xl bg-accent px-1.5 py-0.5 text-xs font-medium text-white">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          ) : null}
-        </NavLink>
-        <NavLink to="/profile" className={linkClass}>
-          <UserAvatar user={user} className="h-6 w-6" />
-          Profile
-        </NavLink>
+        {mapLink}
+        {notificationsLink}
+        {profileLink}
         <div className="mt-auto flex flex-col gap-2 pt-6">
           <NavLink to="/how-it-works" className="rounded-2xl px-3 py-2 text-sm text-muted hover:bg-background hover:text-ink">
             Tutorial

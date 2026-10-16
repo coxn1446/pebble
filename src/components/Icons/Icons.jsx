@@ -53,6 +53,19 @@ export const CloseIcon = ({ className = 'h-4 w-4' }) => (
   </svg>
 );
 
+export const PlusIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+export const GearIcon = ({ className = 'h-4 w-4' }) => (
+  <svg {...baseProps} className={className}>
+    <path d="M10.1 2.8h3.8l.5 2.2c.6.2 1.1.5 1.6.9l2-1.1 2.7 2.7-1.1 2c.4.5.7 1 .9 1.6l2.2.5v3.8l-2.2.5c-.2.6-.5 1.1-.9 1.6l1.1 2-2.7 2.7-2-1.1c-.5.4-1 .7-1.6.9l-.5 2.2h-3.8l-.5-2.2c-.6-.2-1.1-.5-1.6-.9l-2 1.1-2.7-2.7 1.1-2a6 6 0 0 1-.9-1.6l-2.2-.5V9.6l2.2-.5c.2-.6.5-1.1.9-1.6l-1.1-2 2.7-2.7 2 1.1c.5-.4 1-.7 1.6-.9l.5-2.2Z" />
+    <circle cx="12" cy="12" r="2.4" />
+  </svg>
+);
+
 export const LeafIcon = ({ className = 'h-4 w-4' }) => (
   <svg {...baseProps} className={className}>
     <path d="M5 13c0-5 4-9 11-9 0 7-4 11-11 11Z" />

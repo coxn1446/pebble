@@ -110,13 +110,13 @@ const Element = ({ attributes, children, element }) => {
       );
     case 'bulleted-list':
       return (
-        <ul {...attributes} className="mb-2 list-disc pl-5 text-sm text-ink">
+        <ul {...attributes} className="mb-2 list-disc pl-5 text-base text-ink">
           {children}
         </ul>
       );
     case 'numbered-list':
       return (
-        <ol {...attributes} className="mb-2 list-decimal pl-5 text-sm text-ink">
+        <ol {...attributes} className="mb-2 list-decimal pl-5 text-base text-ink">
           {children}
         </ol>
       );
@@ -151,7 +151,7 @@ const Element = ({ attributes, children, element }) => {
         <div
           {...attributes}
           contentEditable={false}
-          className="my-3 rounded-2xl border border-border bg-background px-3 py-2 text-sm text-ink"
+          className="my-3 rounded-2xl border border-border bg-background px-3 py-2 text-base text-ink"
         >
           {children}
           <a
@@ -167,7 +167,7 @@ const Element = ({ attributes, children, element }) => {
       );
     default:
       return (
-        <p {...attributes} className="mb-2 text-sm leading-relaxed text-ink">
+        <p {...attributes} className="mb-2 text-base leading-relaxed text-ink">
           {children}
         </p>
       );
@@ -231,7 +231,7 @@ const FieldNotesEditor = ({ value, onChange, wordCap = FIELD_NOTES_WORD_CAP }) =
           onFocus={() => setWriting(true)}
         >
           <Editable
-            className="min-h-full px-3 py-3 outline-none"
+            className="min-h-full px-3 py-3 text-base outline-none"
             renderElement={renderElement}
             renderLeaf={renderLeaf}
             placeholder="Write field notes…"

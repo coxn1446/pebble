@@ -64,6 +64,15 @@ describe('Settings', () => {
     );
 
     await waitFor(() => expect(screen.getByDisplayValue('Biologist')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'Connect Google' })).toHaveAttribute(
+      'href',
+      '/api/auth/google?link=1&return=/settings'
+    );
+    expect(screen.getByRole('link', { name: 'Connect Apple' })).toHaveAttribute(
+      'href',
+      '/api/auth/apple?link=1&return=/settings'
+    );
+    expect(screen.getByText('Password').parentElement).toHaveTextContent('Not connected');
 
     fireEvent.click(screen.getByLabelText(/Allow my content to appear in search/i));
     fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));

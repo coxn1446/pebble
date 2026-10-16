@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -75,7 +75,9 @@ describe('PebbleDetail', () => {
     expect(screen.getByText('fast ice')).toBeInTheDocument();
     const gallery = screen.getByTestId('pebble-media-gallery');
     expect(gallery).toHaveClass('grid-cols-5', 'w-full', 'min-w-0');
-    expect(gallery.querySelector('video')).toHaveAttribute('src', 'https://example.com/clip.mp4#t=0.1');
+    expect(gallery.querySelector('video')).toHaveAttribute('src', 'https://example.com/clip.mp4');
+    expect(gallery.querySelector('video').controls).toBe(true);
+    expect(gallery.querySelector('svg')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://example.edu/paper' })).toBeInTheDocument();
     expect(screen.getByText('What changed?')).toBeInTheDocument();
 
@@ -84,6 +86,8 @@ describe('PebbleDetail', () => {
     const questions = screen.getByRole('heading', { name: 'Questions to consider' });
     expect(notes.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(reading.compareDocumentPosition(questions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '← Back' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
   test('shows a date alone and a 24-hour time when one was entered', async () => {
@@ -136,15 +140,46 @@ describe('PebbleDetail', () => {
     expect(gallery.querySelectorAll('button')).toHaveLength(5);
 
     fireEvent.click(screen.getByRole('button', { name: 'one.jpg' }));
-    const viewer = screen.getByRole('dialog', { name: 'one.jpg' });
+    const viewer = screen.getByRole('dialog', { name: 'Media' });
     expect(viewer.querySelector('img')).toHaveAttribute('src', 'https://example.com/one.jpg');
+    expect(within(viewer).getByRole('button', { name: 'Slide 1 of 5' })).toHaveAttribute('aria-current', 'true');
+    fireEvent.click(within(viewer).getByRole('button', { name: 'Slide 2 of 5' }));
+    expect(within(viewer).getByRole('button', { name: 'Slide 2 of 5' })).toHaveAttribute('aria-current', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'clip.mp4' }));
-    const video = screen.getByRole('dialog', { name: 'clip.mp4' }).querySelector('video');
+    const video = screen.getByRole('dialog', { name: 'Media' }).querySelector('video');
     expect(video).toHaveAttribute('src', 'https://example.com/clip.mp4');
     expect(video.controls).toBe(true);
+  });
+
+  test('shows an optional image title above the caption', async () => {
+    fetchPebble.mockResolvedValue({
+      pebble_id: 4,
+      title: 'Shelf ice',
+      author_username: 'ada',
+      media: [
+        {
+          media_id: 1,
+          media_url: 'https://example.com/one.jpg',
+          media_type: 'image',
+          filename: 'one.jpg',
+          title: 'Face',
+          caption: 'Noon light',
+        },
+      ],
+      field_notes: [],
+    });
+    renderDetail();
+    fireEvent.click(await screen.findByRole('button', { name: 'one.jpg' }));
+    const viewer = screen.getByRole('dialog', { name: 'Media' });
+    const photo = viewer.querySelector('img');
+    const imageTitle = within(viewer).getByRole('heading', { name: 'Face' });
+    const caption = within(viewer).getByText('Noon light');
+    expect(photo.compareDocumentPosition(imageTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(imageTitle.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(viewer).queryByRole('button', { name: /Slide/ })).not.toBeInTheDocument();
   });
 
   test('replaces a media file that fails to load', async () => {

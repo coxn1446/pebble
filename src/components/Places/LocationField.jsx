@@ -1,11 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CollapseIcon, ExpandIcon, RecenterIcon } from '../Icons/Icons';
 import PlaceAutocomplete from './PlaceAutocomplete';
-import {
-  fetchPlacesApiKey,
-  loadGoogleMapsApi,
-  placeFromGeocoderResult,
-} from '../../helpers/placesHelpers';
+import { droppedPin, fetchPlacesApiKey, loadGoogleMapsApi } from '../../helpers/placesHelpers';
 
 const inputClass =
   'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-pebble focus:border-accent';
@@ -53,20 +49,11 @@ const LocationField = ({ value, onChange, pinName = '', onPinNameChange }) => {
           zoom: Number.isFinite(Number(valueRef.current?.placeLat)) ? 6 : 2,
           disableDefaultUI: true,
           zoomControl: true,
-          gestureHandling: 'greedy',
+          gestureHandling: 'cooperative',
           mapId: result.mapId || undefined,
         });
         map.addListener('click', (event) => {
-          const nextLat = event.latLng.lat();
-          const nextLng = event.latLng.lng();
-          const geocoder = new google.maps.Geocoder();
-          geocoder.geocode({ location: { lat: nextLat, lng: nextLng } }, (results, status) => {
-            if (status === 'OK' && results?.[0]) {
-              onChangeRef.current(placeFromGeocoderResult(results[0], nextLat, nextLng));
-              return;
-            }
-            onChangeRef.current(placeFromGeocoderResult(null, nextLat, nextLng));
-          });
+          onChangeRef.current(droppedPin(event.latLng.lat(), event.latLng.lng()));
         });
         mapInstance.current = map;
         setMapReady(true);

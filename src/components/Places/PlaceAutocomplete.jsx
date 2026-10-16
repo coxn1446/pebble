@@ -7,7 +7,7 @@ import {
 } from '../../helpers/placesHelpers';
 
 const inputClass =
-  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-pebble focus:border-accent';
+  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-pebble focus:border-accent';
 
 const PLACEHOLDER = 'City, lab, or field site';
 
@@ -15,6 +15,9 @@ const PlaceAutocomplete = ({ value, onChange, label = 'Location' }) => {
   const hostRef = useRef(null);
   const elementRef = useRef(null);
   const onChangeRef = useRef(onChange);
+  const valueRef = useRef(value);
+  const echoRef = useRef(false);
+  valueRef.current = value;
   const [apiKey, setApiKey] = useState(null);
   const [placesReady, setPlacesReady] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -41,9 +44,13 @@ const PlaceAutocomplete = ({ value, onChange, label = 'Location' }) => {
   useEffect(() => {
     setPlaceName(value?.placeName || '');
     const element = elementRef.current;
-    if (element && value?.placeName != null && element.value !== value.placeName) {
-      element.value = value.placeName;
-    }
+    if (!element || value?.placeName == null || element.value === value.placeName) return undefined;
+    echoRef.current = true;
+    element.value = value.placeName;
+    const timer = window.setTimeout(() => {
+      echoRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [value?.placeName]);
 
   useEffect(() => {
@@ -63,8 +70,12 @@ const PlaceAutocomplete = ({ value, onChange, label = 'Location' }) => {
         const next = placeFromNewPlace(place);
         if (!next.placeId && !next.placeName) return;
         setPlaceName(next.placeName);
+        echoRef.current = true;
         if (element) element.value = next.placeName;
         onChangeRef.current?.(next);
+        window.setTimeout(() => {
+          echoRef.current = false;
+        }, 0);
       } catch (err) {
         console.error('[Places] Failed to resolve selected place', err);
         setLoadError(err?.message || 'Could not load place details');
@@ -73,6 +84,7 @@ const PlaceAutocomplete = ({ value, onChange, label = 'Location' }) => {
 
     const handleInput = () => {
       const nextName = element?.value || '';
+      if (echoRef.current || nextName === (valueRef.current?.placeName || '')) return;
       setPlaceName(nextName);
       onChangeRef.current?.(emptyPlace(nextName));
     };
@@ -82,7 +94,7 @@ const PlaceAutocomplete = ({ value, onChange, label = 'Location' }) => {
       setLoadError('Places request denied — check API key and Places API (New)');
     };
 
-    loadGooglePlacesApi(apiKey)
+    Promise.resolve(loadGooglePlacesApi(apiKey))
       .then(async (google) => {
         if (cancelled || !hostRef.current) return;
 

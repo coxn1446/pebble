@@ -12,6 +12,9 @@ const stored = {
   author_id: 1,
   title: 'Shelf',
   status: 'published',
+  place_lat: 1,
+  place_lng: 2,
+  place_name: 'Antarctica',
   observed_at: '2020-05-01T18:00:00.000Z',
   observed_on: null,
   observed_time: null,
@@ -46,6 +49,9 @@ describe('pebble observation persistence', () => {
     await pebbleService.create(1, {
       title: 'Shelf',
       status: 'published',
+      phenomenonIds: [9],
+      placeLat: -75,
+      placeLng: 0,
       observedOn: '2021-07-27',
       observedTime: null,
       pinName: 'Antarctica',
@@ -62,6 +68,10 @@ describe('pebble observation persistence', () => {
     await pebbleService.create(1, {
       title: 'Shelf',
       status: 'published',
+      phenomenonIds: [9],
+      placeLat: -75,
+      placeLng: 0,
+      placeName: 'Field',
       observedOn: '2021-07-27',
       observedTime: '15:00',
     });
@@ -70,6 +80,7 @@ describe('pebble observation persistence', () => {
 
     await pebbleService.update(4, 1, {
       title: 'Shelf',
+      phenomenonIds: [9],
       observedOn: '2020-05-01',
       observedTime: '14:00',
       observedAt: '2020-05-01T18:00:00.000Z',
@@ -90,6 +101,59 @@ describe('pebble observation persistence', () => {
     expect(pebbleQueries.search).toContain("ot.name ILIKE '%' || $1 || '%'");
     expect(pebbleQueries.mapPins).toContain("p.pin_name ILIKE '%' || $2 || '%'");
     expect(pebbleQueries.mapPins).toContain("ph.name ILIKE '%' || $2 || '%'");
-    expect(pebbleQueries.mapPins).toContain("ot.name ILIKE '%' || $2 || '%'");
+    expect(pebbleQueries.search).toContain("p.field_notes::text ILIKE '%' || $1 || '%'");
+    expect(pebbleQueries.search).toContain('unnest($12::text[])');
+    expect(pebbleQueries.mapPins).toContain('unnest($12::text[])');
+  });
+
+  test('a published pebble requires a phenomenon topic', async () => {
+    await expect(
+      pebbleService.create(1, { title: 'Shelf', status: 'published' })
+    ).rejects.toMatchObject({ message: 'Choose a phenomenon topic', status: 400 });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  test('a published pin with coordinates needs a place or a pin name', async () => {
+    await expect(
+      pebbleService.create(1, {
+        title: 'Shelf',
+        status: 'published',
+        phenomenonIds: [9],
+        placeLat: 1,
+        placeLng: 2,
+        placeName: '  ',
+        pinName: '',
+      })
+    ).rejects.toMatchObject({ message: 'Name the pin', status: 400 });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  test('saves an image title with the caption and crop', async () => {
+    await pebbleService.update(4, 1, {
+      phenomenonIds: [9],
+      mediaIds: [3],
+      media: [
+        {
+          mediaId: 3,
+          title: '  Ice face  ',
+          caption: 'Noon',
+          previewX: 20,
+          previewY: 80,
+          previewScale: 1.5,
+        },
+      ],
+    });
+    const call = query.mock.calls.find((item) => String(item[0]).includes('SET title'));
+    expect(call[1]).toEqual([3, 4, 'Ice face', 'Noon', 20, 80, 1.5]);
+  });
+
+  test('a published pebble requires a location', async () => {
+    await expect(
+      pebbleService.create(1, {
+        title: 'Shelf',
+        status: 'published',
+        phenomenonIds: [9],
+      })
+    ).rejects.toMatchObject({ message: 'Add a location', status: 400 });
   });
 });

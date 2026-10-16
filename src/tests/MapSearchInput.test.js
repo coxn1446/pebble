@@ -41,7 +41,7 @@ describe('MapSearchInput', () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText(/Search people or places/i), {
+    fireEvent.change(screen.getByLabelText(/search for pebbles/i), {
       target: { value: 'Kait' },
     });
     expect(onChange).toHaveBeenCalledWith('Kait');

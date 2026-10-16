@@ -8,17 +8,24 @@ import Profile from '../routes/Profile';
 import authReducer from '../store/auth.reducer';
 import { fetchUserProfile } from '../helpers/userHelpers';
 import {
-  addPebbleToCollection,
   createCollection,
-  deleteCollection,
   fetchCollections,
   inviteToCollection,
 } from '../helpers/collectionHelpers';
 import { fetchSearchSuggestions } from '../helpers/searchHelpers';
 import { uploadFile } from '../helpers/uploadHelpers';
+import { logout } from '../helpers/authHelpers';
+import { MOBILE_WELCOME_QUERY } from '../components/Welcome/WelcomeShared';
 
 jest.mock('../helpers/userHelpers', () => ({
   fetchUserProfile: jest.fn(),
+  fetchMe: jest.fn(async () => ({
+    user_id: 1,
+    username: 'ada',
+    display_name: 'Ada',
+    content_searchable: true,
+  })),
+  updateMe: jest.fn(),
 }));
 
 jest.mock('../helpers/socialHelpers', () => ({
@@ -41,6 +48,19 @@ jest.mock('../helpers/searchHelpers', () => ({
 
 jest.mock('../helpers/uploadHelpers', () => ({
   uploadFile: jest.fn(),
+}));
+
+jest.mock('../helpers/authHelpers', () => ({
+  logout: jest.fn(async () => {}),
+}));
+
+jest.mock('../helpers/notificationHelpers', () => ({
+  fetchNotificationPreferences: jest.fn(async () => ({})),
+  updateNotificationPreferences: jest.fn(),
+}));
+
+jest.mock('../helpers/organizationHelpers', () => ({
+  searchOrganizations: jest.fn(async () => []),
 }));
 
 const me = { user_id: 1, username: 'ada' };
@@ -103,17 +123,18 @@ describe('Profile collections', () => {
     expect(labels).toEqual(['Antarctica', 'Newer ice']);
     expect(screen.queryByText('Older ice')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Map' })).toHaveAttribute('href', '/?mine=1');
+    expect(screen.getByTestId('profile-collections')).toHaveClass('grid-cols-3');
+    expect(screen.getByTestId('profile-pebble-grid')).toHaveClass('grid-cols-3');
+    expect(screen.getByText('Pebbles').closest('p')).toHaveTextContent('2');
   });
 
-  test('rows view lists the same order', async () => {
-    const user = userEvent.setup();
+  test('your profile links edit profile, and sign out stays off the page', async () => {
     renderProfile();
-    await screen.findByTestId('profile-gallery');
-    await user.click(screen.getByRole('button', { name: 'Rows' }));
-    const rows = screen.getByTestId('profile-rows');
-    expect(rows).toHaveTextContent('Antarctica');
-    expect(rows).toHaveTextContent('Newer ice');
-    expect(rows.textContent.indexOf('Antarctica')).toBeLessThan(rows.textContent.indexOf('Newer ice'));
+    expect(await screen.findByRole('link', { name: 'Edit profile' })).toHaveAttribute('href', '/settings');
+    expect(screen.queryByRole('link', { name: 'Tutorial' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Gallery' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rows' })).not.toBeInTheDocument();
   });
 
   test('collaborate opens an invite popover and sends the invite', async () => {
@@ -126,59 +147,69 @@ describe('Profile collections', () => {
     uploadFile.mockResolvedValue({ media_url: 'https://example.com/cover.jpg' });
     renderProfile();
     await user.click(await screen.findByRole('button', { name: 'New collection' }));
-    await user.type(screen.getByRole('textbox'), 'Field team');
-    await user.click(screen.getByRole('checkbox', { name: 'Collaborate' }));
-    expect(screen.getByTestId('invite-popover')).toBeInTheDocument();
-    await user.type(screen.getByPlaceholderText('Name or username'), 'be');
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Field team');
+    await user.type(screen.getByRole('textbox', { name: 'Add collaborators' }), 'be');
     await user.click(await screen.findByRole('button', { name: /Bea/ }));
-    await user.click(screen.getByRole('button', { name: 'Create collection' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
     expect(createCollection).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Field team', isCollaborative: true })
     );
     expect(inviteToCollection).toHaveBeenCalledWith(9, 4);
   });
 
-  test('add selects pebbles by click', async () => {
-    const user = userEvent.setup();
-    addPebbleToCollection.mockResolvedValue({});
+  test('the gallery has no add or delete controls', async () => {
     renderProfile();
-    await user.click(await screen.findByRole('button', { name: 'Add' }));
-    await user.click(screen.getByRole('button', { name: 'Newer ice' }));
-    await user.click(screen.getByRole('button', { name: 'Older ice' }));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(addPebbleToCollection).toHaveBeenCalledWith(7, 3);
-    expect(addPebbleToCollection).toHaveBeenCalledWith(7, 2);
+    expect(await screen.findByRole('link', { name: 'Antarctica' })).toHaveAttribute('href', '/collections/7');
+    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Delete/ })).not.toBeInTheDocument();
   });
 
-  test('the owner deletes a collection after confirming, and a shared collection has no delete', async () => {
+  test('a phone profile keeps edit, drafts, and sign out in the menu', async () => {
     const user = userEvent.setup();
-    fetchCollections
-      .mockResolvedValueOnce([
-        {
-          collection_id: 7,
-          owner_id: 1,
-          name: 'Climate Science',
-          pebble_ids: [],
-        },
-        {
-          collection_id: 8,
-          owner_id: 9,
-          name: 'Shared shelf',
-          pebble_ids: [],
-        },
-      ])
-      .mockResolvedValueOnce([]);
-    deleteCollection.mockResolvedValue({ success: true });
+    window.matchMedia.mockImplementation((query) => ({
+      matches: query === MOBILE_WELCOME_QUERY,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
     renderProfile();
-    expect(await screen.findByRole('button', { name: 'Delete Climate Science' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete Shared shelf' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Delete Climate Science' }));
-    expect(screen.getByTestId('delete-collection-modal')).toHaveTextContent('Climate Science');
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(deleteCollection).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Delete Climate Science' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-    await waitFor(() => expect(deleteCollection).toHaveBeenCalledWith(7));
-    await waitFor(() => expect(screen.queryByText('Climate Science')).not.toBeInTheDocument());
+    expect(await screen.findByRole('button', { name: 'Profile menu' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New pebble' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit profile' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Profile menu' }));
+    await user.click(screen.getByRole('button', { name: 'Drafts' }));
+    const drafts = screen.getByTestId('drafts-modal');
+    expect(drafts).toHaveClass('fixed', 'pt-safe-top', 'pb-safe-bottom');
+    expect(drafts.querySelector('[role="dialog"]')).toHaveClass('rounded-2xl', 'h-full');
+    expect(drafts.querySelector('[role="dialog"]')).not.toHaveClass('h-dvh');
+    expect(drafts).toHaveTextContent('No drafts.');
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByTestId('drafts-modal')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Profile menu' }));
+    await user.click(screen.getByRole('button', { name: 'Edit profile' }));
+    expect(await screen.findByTestId('edit-profile-modal')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Profile menu' }));
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(logout).toHaveBeenCalled();
+
+    window.matchMedia.mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
   });
 });

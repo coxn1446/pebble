@@ -22,6 +22,7 @@ React 19 (Vite 6) + Redux Toolkit 2 + Tailwind CSS 4 + Ionic React 8 + Capacitor
 - Every behavior change includes tests (happy path, failure/edge, authorization when relevant).
 - UI uses existing Tailwind tokens only. Clone `PebbleCard`, `BrandMark`, `ContentArea`, `PebbleMap`, `FieldNotesEditor`, or `AuthPageLayout` rather than inventing chrome.
 - Keep privacy rules: private pebbles, `content_searchable`, blocks, collection membership.
+- Accounts use `password`, `google_id`, and `apple_id` on `users`. A password hash means local login. A provider id means that provider is linked. One account can have any combination. Do not add `auth_provider` / `provider_id`.
 
 ## Commands
 

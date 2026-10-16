@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import PebbleForm from '../components/Pebbles/PebbleForm';
-import { createPebble, publishedMapPath, updatePebble } from '../helpers/pebbleHelpers';
+import { createPebble, deletePebble, publishedMapPath, updatePebble } from '../helpers/pebbleHelpers';
 
 const PebbleNew = () => {
   const navigate = useNavigate();
@@ -37,6 +37,7 @@ const PebbleNew = () => {
       submitLabel="Publish"
       onSubmit={handleSubmit}
       onSaveDraft={handleSaveDraft}
+      onDiscardDraft={deletePebble}
       isSubmitting={isSubmitting}
     />
   );

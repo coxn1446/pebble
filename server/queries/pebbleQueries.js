@@ -187,24 +187,96 @@ const listPhenomenaForPebble = `
   ORDER BY f.name, ph.name
 `;
 
+const countPhenomena = `
+  SELECT COUNT(*)::int AS count
+  FROM pebble_phenomena
+  WHERE pebble_id = $1
+`;
+
 const attachMedia = `
   UPDATE pebble_media
   SET pebble_id = $2
   WHERE media_id = $1 AND (pebble_id IS NULL OR pebble_id = $2)
-  RETURNING media_id, pebble_id, media_url, media_type, filename, created_at
+  RETURNING media_id, pebble_id, media_url, media_type, filename, title, caption,
+    preview_x, preview_y, preview_scale, created_at
 `;
 
 const insertMedia = `
   INSERT INTO pebble_media (pebble_id, media_url, media_type, filename)
   VALUES ($1, $2, $3, $4)
-  RETURNING media_id, pebble_id, media_url, media_type, filename, created_at
+  RETURNING media_id, pebble_id, media_url, media_type, filename, title, caption,
+    preview_x, preview_y, preview_scale, created_at
+`;
+
+const updateMediaDetails = `
+  UPDATE pebble_media
+  SET title = $3,
+      caption = $4,
+      preview_x = $5,
+      preview_y = $6,
+      preview_scale = $7
+  WHERE media_id = $1
+    AND (pebble_id IS NULL OR pebble_id = $2)
 `;
 
 const listMedia = `
-  SELECT media_id, pebble_id, media_url, media_type, filename, created_at
+  SELECT media_id, pebble_id, media_url, media_type, filename, title, caption,
+    preview_x, preview_y, preview_scale, created_at
   FROM pebble_media
   WHERE pebble_id = $1
   ORDER BY created_at ASC
+`;
+
+const listPhenomenaForPebbles = `
+  SELECT pp.pebble_id, ph.phenomenon_id, ph.name, ph.field_id, f.name AS field_name
+  FROM pebble_phenomena pp
+  JOIN phenomena ph ON ph.phenomenon_id = pp.phenomenon_id
+  JOIN fields f ON f.field_id = ph.field_id
+  WHERE pp.pebble_id = ANY($1::int[])
+  ORDER BY f.name, ph.name
+`;
+
+const listFieldsForPebbles = `
+  SELECT pf.pebble_id, f.field_id, f.name
+  FROM pebble_fields pf
+  JOIN fields f ON f.field_id = pf.field_id
+  WHERE pf.pebble_id = ANY($1::int[])
+  ORDER BY f.name
+`;
+
+const listOtherTagsForPebbles = `
+  SELECT pebble_id, other_tag_id, name
+  FROM pebble_other_tags
+  WHERE pebble_id = ANY($1::int[])
+  ORDER BY name
+`;
+
+const listResourcesForPebbles = `
+  SELECT pebble_id, resource_id, url, sort_order
+  FROM pebble_resources
+  WHERE pebble_id = ANY($1::int[])
+  ORDER BY sort_order, resource_id
+`;
+
+const listQuestionsForPebbles = `
+  SELECT pebble_id, question_id, prompt, sort_order
+  FROM pebble_questions
+  WHERE pebble_id = ANY($1::int[])
+  ORDER BY sort_order, question_id
+`;
+
+const listMediaForPebbles = `
+  SELECT media_id, pebble_id, media_url, media_type, filename, title, caption,
+    preview_x, preview_y, preview_scale, created_at
+  FROM pebble_media
+  WHERE pebble_id = ANY($1::int[])
+  ORDER BY created_at ASC
+`;
+
+const likedAmong = `
+  SELECT pebble_id
+  FROM pebble_likes
+  WHERE user_id = $1 AND pebble_id = ANY($2::int[])
 `;
 
 const like = `
@@ -280,9 +352,10 @@ const feed = `
 `;
 
 /**
- * Advanced search: optional q, field_id, author, region, favorites, mine, media types.
+ * Advanced search: optional q, field_id, author, region, favorites, mine, media types,
+ * phenomenon_id, and field-note keywords.
  * Params: $1 q, $2 viewerId, $3 fieldId, $4 author, $5 region, $6 favorites, $7 mine,
- * $8 hasPhoto, $9 hasVideo, $10 hasData
+ * $8 hasPhoto, $9 hasVideo, $10 hasData, $11 phenomenonId, $12 notes
  */
 const search = `
   SELECT DISTINCT ${PEBBLE_FIELDS},
@@ -338,6 +411,13 @@ const search = `
         SELECT 1 FROM pebble_other_tags ot
         WHERE ot.pebble_id = p.pebble_id
           AND ot.name ILIKE '%' || $1 || '%'
+      )
+      OR p.field_notes::text ILIKE '%' || $1 || '%'
+      OR EXISTS (
+        SELECT 1 FROM pebble_fields pf
+        JOIN fields f ON f.field_id = pf.field_id
+        WHERE pf.pebble_id = p.pebble_id
+          AND f.name ILIKE '%' || $1 || '%'
       )
     )
     AND (
@@ -401,6 +481,20 @@ const search = `
       OR EXISTS (
         SELECT 1 FROM pebble_media pm
         WHERE pm.pebble_id = p.pebble_id AND pm.media_type = 'data'
+      )
+    )
+    AND (
+      $11::int IS NULL
+      OR EXISTS (
+        SELECT 1 FROM pebble_phenomena pp
+        WHERE pp.pebble_id = p.pebble_id AND pp.phenomenon_id = $11
+      )
+    )
+    AND (
+      COALESCE(cardinality($12::text[]), 0) = 0
+      OR (
+        SELECT bool_and(p.field_notes::text ILIKE '%' || term || '%')
+        FROM unnest($12::text[]) AS term
       )
     )
   ORDER BY favorite_rank DESC, p.created_at DESC
@@ -506,6 +600,13 @@ const mapPins = `
         WHERE ot.pebble_id = p.pebble_id
           AND ot.name ILIKE '%' || $2 || '%'
       )
+      OR p.field_notes::text ILIKE '%' || $2 || '%'
+      OR EXISTS (
+        SELECT 1 FROM pebble_fields pf
+        JOIN fields f ON f.field_id = pf.field_id
+        WHERE pf.pebble_id = p.pebble_id
+          AND f.name ILIKE '%' || $2 || '%'
+      )
     )
     AND (
       $3::int IS NULL
@@ -562,6 +663,20 @@ const mapPins = `
         WHERE pm.pebble_id = p.pebble_id AND pm.media_type = 'data'
       )
     )
+    AND (
+      $11::int IS NULL
+      OR EXISTS (
+        SELECT 1 FROM pebble_phenomena pp
+        WHERE pp.pebble_id = p.pebble_id AND pp.phenomenon_id = $11
+      )
+    )
+    AND (
+      COALESCE(cardinality($12::text[]), 0) = 0
+      OR (
+        SELECT bool_and(p.field_notes::text ILIKE '%' || term || '%')
+        FROM unnest($12::text[]) AS term
+      )
+    )
   ORDER BY favorite_rank DESC, p.created_at DESC
   LIMIT 500
 `;
@@ -573,28 +688,37 @@ module.exports = {
   remove,
   clearPhenomena,
   addPhenomenon,
+  countPhenomena,
   listPhenomenaForPebble,
+  listPhenomenaForPebbles,
   clearFields,
   addField,
   listFieldsForPebble,
+  listFieldsForPebbles,
   clearOtherTags,
   addOtherTag,
   listOtherTags,
+  listOtherTagsForPebbles,
   clearResources,
   addResource,
   listResources,
+  listResourcesForPebbles,
   clearQuestions,
   addQuestion,
   listQuestions,
+  listQuestionsForPebbles,
   clearMedia,
   deleteMediaExcept,
   attachMedia,
   insertMedia,
+  updateMediaDetails,
   listMedia,
+  listMediaForPebbles,
   like,
   unlike,
   likeCount,
   userLiked,
+  likedAmong,
   feed,
   search,
   listByAuthor,

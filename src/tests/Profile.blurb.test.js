@@ -67,6 +67,9 @@ describe('Profile blurb', () => {
     expect(blurb).toHaveTextContent('I watch ice shelves. The coast tells the story. Notes stay short.');
     expect(name.compareDocumentPosition(blurb) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(followers.compareDocumentPosition(blurb) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Tutorial' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Follow' })).toBeInTheDocument();
   });
 
   test('renders nothing when the blurb is empty', async () => {

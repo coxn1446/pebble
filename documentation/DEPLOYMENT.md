@@ -44,10 +44,10 @@ gcloud beta run services add-iam-policy-binding pebble-prod --region=us-central1
 
 ## Google Sign-In (Console)
 
-OAuth is stubbed until you add a web client in this app project:
+The app accepts Google sign-in once a web client exists in this project. `gcloud iam oauth-clients` is for workforce identity and will not produce a Sign in with Google client (`*.apps.googleusercontent.com`). Create the client in the Google Auth Platform:
 
 1. Open [Google Auth Platform](https://console.cloud.google.com/auth/overview?project=pebble-504520).
-2. Create an OAuth 2.0 Client ID, type **Web application**. Authorized JavaScript origins:
+2. Create an OAuth 2.0 Client ID, type **Web application**. Name it Pebble. Authorized JavaScript origins:
    - `http://localhost:3000`
    - `https://pebble-qa-399201808588.us-central1.run.app`
    - `https://pebble-prod-399201808588.us-central1.run.app`
@@ -67,6 +67,37 @@ printf '%s' 'PASTE_CLIENT_SECRET' | gcloud secrets create QA_GOOGLE_CLIENT_SECRE
 gcloud run services update pebble-prod --region=us-central1 --project="$PROJECT_ID" --update-env-vars=OAUTH_RELOAD="$(date +%s)"
 gcloud run services update pebble-qa --region=us-central1 --project="$PROJECT_ID" --update-env-vars=OAUTH_RELOAD="$(date +%s)"
 ```
+
+Put the same client id and secret in local `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The callback URL is `${DEFAULT_CLIENT_URL}/api/auth/google/callback`.
+
+Same-email Google sign-in links `users.google_id` onto an existing account and keeps `password`. Edit profile → Sign in → Connect attaches Google when the emails differ.
+
+## Apple Sign-In (Developer portal)
+
+There is no Apple CLI that can finish this the way `gcloud` manages Cloud resources. `fastlane produce enable_services --sign_in_with_apple` can turn the capability on for an App ID after you already have an Apple ID session or an App Store Connect API key. It does not create the Services ID, verify the domain, register return URLs, or download the Sign in with Apple `.p8` key. Those steps stay in [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources).
+
+1. Sign in as an Account Holder or Admin.
+2. Identifiers → App IDs. Enable **Sign in with Apple** on:
+   - `io.pebble.app` (prod)
+   - `io.pebble.qa`
+   - `io.pebble.app.dev`
+3. Identifiers → Services IDs. Create `io.pebble.web` (this value is `APPLE_CLIENT_ID`). Enable Sign in with Apple, set the primary App ID to `io.pebble.app`, and register return URLs:
+   - `https://pebble-qa-399201808588.us-central1.run.app/api/auth/apple/callback`
+   - `https://pebble-prod-399201808588.us-central1.run.app/api/auth/apple/callback`
+4. Verify each Cloud Run domain (Apple’s association file or DNS). Apple does not accept `http://localhost` return URLs, so web Apple sign-in is exercised on QA/prod.
+5. Keys → create a key with **Sign in with Apple**, assign it to `io.pebble.app`, and download the `.p8` once. The key id is `APPLE_KEY_ID`. The team id is `APPLE_TEAM_ID` (Membership details).
+6. Store the secrets. `APPLE_KEY` is the PEM contents; escaped newlines (`\n`) are fine:
+
+```bash
+PROJECT_ID=pebble-504520
+printf '%s' 'PASTE_SERVICES_ID' | gcloud secrets create APPLE_CLIENT_ID --data-file=- --project="$PROJECT_ID"
+printf '%s' 'PASTE_TEAM_ID' | gcloud secrets create APPLE_TEAM_ID --data-file=- --project="$PROJECT_ID"
+printf '%s' 'PASTE_KEY_ID' | gcloud secrets create APPLE_KEY_ID --data-file=- --project="$PROJECT_ID"
+gcloud secrets create APPLE_KEY --data-file=./AuthKey.p8 --project="$PROJECT_ID"
+# Repeat with the QA_ prefix for the QA Cloud Run service.
+```
+
+The Apple callback is a cross-site POST, so the link intent travels in a signed `state` value rather than the session cookie. Edit profile uses the same Connect action as Google.
 
 ## Secrets (already created)
 

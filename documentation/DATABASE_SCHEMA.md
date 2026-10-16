@@ -3,7 +3,7 @@
 > **IMPORTANT**: Update this file whenever ANY database changes are made.
 
 ## Last Updated
-2026-09-29 (migration 09)
+2026-10-12 (migration 12)
 
 ## Overview
 
@@ -29,14 +29,14 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
 - **Last Modified**: 2026-08-07
 
 ### users
-- **Purpose**: User accounts for local and OAuth authentication (personal or organization)
+- **Purpose**: User accounts. A row can have a local password, Google, and Apple at the same time
 - **Columns**:
   - `user_id` (SERIAL PRIMARY KEY)
-  - `email` (VARCHAR UNIQUE) — primary login identifier
+  - `email` (VARCHAR UNIQUE) — primary login identifier. OAuth sign-in matches it case-insensitively
   - `username` (VARCHAR UNIQUE)
-  - `password` (VARCHAR) — bcrypt hash; null for OAuth-only users
-  - `auth_provider` (VARCHAR) — `local` | `google` | `apple`
-  - `provider_id` (VARCHAR) — external subject id for OAuth
+  - `password` (VARCHAR) — bcrypt hash. Present when local login is enabled; null when it is not
+  - `google_id` (VARCHAR) — Google subject (`sub`). Null until Google is linked
+  - `apple_id` (VARCHAR) — Apple subject (`sub`). Null until Apple is linked
   - `display_name` (VARCHAR)
   - `account_type` (VARCHAR) — `personal` | `organization`
   - `profession` (VARCHAR)
@@ -52,9 +52,11 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
 - **Indexes**:
   - unique on `email`
   - unique on `username`
-  - unique on `(auth_provider, provider_id)` where `provider_id` is not null
+  - `users_google_id_uidx` unique on `google_id` where `google_id` is not null
+  - `users_apple_id_uidx` unique on `apple_id` where `apple_id` is not null
+- **Notes**: The same email links Google or Apple onto an existing row when that provider column is empty. Profile sign-in can attach the other provider after the account exists, including when the provider email differs. A subject already stored on a different user is rejected. A new Google or Apple account gets a username from the email so `/profile` can load. Do not use `auth_provider` / `provider_id`.
 - **Source**: `server/db/schema.sql`
-- **Last Modified**: 2026-09-29
+- **Last Modified**: 2026-10-06
 
 ### fields
 - **Purpose**: Overarching scientific field categories (Biology, Physics, etc.)
@@ -146,8 +148,13 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
   - `media_url` (TEXT NOT NULL)
   - `media_type` (VARCHAR) — `image` | `video` | `audio` | `data` | `attachment` | `graph` (`graph` legacy)
   - `filename` (VARCHAR)
+  - `title` (VARCHAR(160)) — optional header shown above the caption
+  - `caption` (TEXT) — optional caption for this item
+  - `preview_x` (NUMERIC) — horizontal focal point, 0–100, default 50
+  - `preview_y` (NUMERIC) — vertical focal point, 0–100, default 50
+  - `preview_scale` (NUMERIC) — preview zoom, 1–3, default 1
   - `created_at` (TIMESTAMPTZ)
-- **Last Modified**: 2026-08-04
+- **Last Modified**: 2026-10-12
 
 ### pebble_likes
 - **Purpose**: User likes on pebbles
@@ -272,6 +279,16 @@ SQL files live in `server/db/migrations/` (`NNN_description.sql`). Apply with `n
 ### `07_observation_pin_name.sql`
 - Added `pebbles.observed_on`, `pebbles.observed_time`, and `pebbles.pin_name`
 - Left existing `observed_at` values in place
+
+### `12_media_title.sql`
+- Added `pebble_media.title`
+
+### `11_media_caption_preview.sql`
+- Added `pebble_media.caption`, `preview_x`, `preview_y`, and `preview_scale`
+
+### `10_user_provider_columns.sql`
+- Replaced `users.auth_provider` and `users.provider_id` with `users.google_id` and `users.apple_id`
+- Added unique indexes `users_google_id_uidx` and `users_apple_id_uidx`
 
 ### `09_user_blurb.sql`
 - Added `users.blurb` (VARCHAR(500))

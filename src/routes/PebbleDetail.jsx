@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import DeletePebbleConfirm from '../components/Pebbles/DeletePebbleConfirm';
 import FieldNotesViewer from '../components/FieldNotes/FieldNotesViewer';
 import FlagDialog from '../components/Moderation/FlagDialog';
 import Modal from '../components/Modal/Modal';
-import MediaFrame from '../components/Pebbles/MediaFrame';
+import MediaCarousel from '../components/Pebbles/MediaCarousel';
+import MediaFrame, { PreviewImage } from '../components/Pebbles/MediaFrame';
+import { featuredMedia } from '../helpers/mediaPreview';
 import SaveToCollectionsDialog from '../components/Collections/SaveToCollectionsDialog';
 import { fieldIconForName } from '../components/Icons/Icons';
 import { selectIsAuthenticated, selectUser } from '../store/auth.reducer';
@@ -15,6 +17,7 @@ import { deletePebble, fetchPebble, formatObserved, likePebble, pinLabel, unlike
 const PebbleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useSelector(selectUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const [pebble, setPebble] = useState(null);
@@ -53,8 +56,20 @@ const PebbleDetail = () => {
     })),
   ];
 
+  const visualMedia = (pebble.media || []).filter(
+    (item) => item.media_type === 'image' || item.media_type === 'video'
+  );
+  const openIndex = visualMedia.findIndex((item) => item.media_id === openMedia?.media_id);
+
   return (
     <div className="w-full space-y-4">
+      <button
+        type="button"
+        onClick={() => (location.key === 'default' ? navigate('/') : navigate(-1))}
+        className="text-sm text-muted hover:text-ink"
+      >
+        ← Back
+      </button>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -64,7 +79,7 @@ const PebbleDetail = () => {
             >
               <FieldIcon className="h-4 w-4" />
             </span>
-            <h1 className="font-display text-2xl font-semibold text-ink">{pebble.title}</h1>
+            <h1 className="min-w-0 break-words font-display text-2xl font-semibold text-ink">{pebble.title}</h1>
           </div>
           <p className="mt-2 text-sm text-muted">
             by{' '}
@@ -101,7 +116,7 @@ const PebbleDetail = () => {
                 onClick={() => setShowSave(true)}
                 className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
               >
-                Save
+                Add to collection
               </button>
             </>
           ) : null}
@@ -111,7 +126,7 @@ const PebbleDetail = () => {
                 to={`/pebbles/${pebble.pebble_id}/edit`}
                 className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
               >
-                Edit
+                Edit pebble
               </Link>
               <button
                 type="button"
@@ -134,11 +149,9 @@ const PebbleDetail = () => {
         </div>
       </div>
       {pebble.hero_image_url ? (
-        <img
-          src={pebble.hero_image_url}
-          alt=""
-          className="max-h-96 w-full rounded-2xl border border-border object-cover"
-        />
+        <div className="max-h-96 overflow-hidden rounded-2xl border border-border">
+          <PreviewImage item={featuredMedia(pebble)} className="max-h-96 w-full" />
+        </div>
       ) : null}
       {pebble.description ? <p className="text-sm text-ink">{pebble.description}</p> : null}
       {tags.length ? (
@@ -188,36 +201,19 @@ const PebbleDetail = () => {
           })}
         </div>
       ) : null}
-      {openMedia ? (
+      {openMedia && visualMedia.length ? (
         <Modal
           onClose={() => setOpenMedia(null)}
-          title={openMedia.filename || 'Media'}
+          title="Media"
           testId="pebble-media-viewer"
-          footer={
-            <button
-              type="button"
-              onClick={() => setOpenMedia(null)}
-              className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
-            >
-              Close
-            </button>
-          }
         >
-          {openMedia.media_type === 'video' ? (
-            <video
-              src={openMedia.media_url}
-              controls
-              playsInline
-              className="max-h-96 w-full rounded-xl bg-surface"
-            />
-          ) : (
-            <img
-              src={openMedia.media_url}
-              alt={openMedia.filename || ''}
-              className="max-h-96 w-full rounded-xl bg-surface object-contain"
-              onError={() => setOpenMedia(null)}
-            />
-          )}
+          <MediaCarousel
+            items={visualMedia}
+            index={openIndex < 0 ? 0 : openIndex}
+            onIndexChange={(next) => setOpenMedia(visualMedia[next])}
+            showText
+            controls
+          />
         </Modal>
       ) : null}
       <div className="rounded-2xl border border-border bg-surface p-4">

@@ -58,7 +58,7 @@ const SaveToCollectionsDialog = ({ pebbleId, onClose }) => {
   return (
     <Modal
       onClose={onClose}
-      title="Save to collections"
+      title="Add to collection"
       testId="save-collections-dialog"
       footer={
         <>
@@ -80,7 +80,6 @@ const SaveToCollectionsDialog = ({ pebbleId, onClose }) => {
         </>
       }
     >
-      <p className="text-sm text-muted">Select one or more collections to keep this pebble.</p>
       {loading ? (
         <p className="text-sm text-muted">Loading…</p>
       ) : collections.length === 0 ? (
@@ -91,7 +90,7 @@ const SaveToCollectionsDialog = ({ pebbleId, onClose }) => {
           </Link>
         </p>
       ) : (
-        <ul className="max-h-64 space-y-2 overflow-y-auto">
+        <ul className="space-y-2">
           {collections.map((c) => (
             <li key={c.collection_id}>
               <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border px-3 py-2 text-sm text-ink hover:border-pebble">

@@ -34,7 +34,7 @@ const UserListModal = ({ username, mode, onClose }) => {
       ) : users.length === 0 ? (
         <p className="text-sm text-muted">No users yet.</p>
       ) : (
-        <ul className="max-h-80 space-y-2 overflow-y-auto">
+        <ul className="space-y-2">
           {users.map((user) => (
             <li key={user.user_id}>
               <Link

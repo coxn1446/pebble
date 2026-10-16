@@ -2,8 +2,9 @@ const USER_FIELDS = `
   user_id,
   email,
   username,
-  auth_provider,
-  provider_id,
+  google_id,
+  apple_id,
+  (password IS NOT NULL) AS has_password,
   display_name,
   account_type,
   profession,
@@ -55,7 +56,7 @@ const findById = `
 const findByEmail = `
   SELECT ${USER_FIELDS}, password
   FROM users
-  WHERE email = $1
+  WHERE LOWER(email) = LOWER($1)
 `;
 
 const findByUsername = `
@@ -64,21 +65,41 @@ const findByUsername = `
   WHERE LOWER(username) = LOWER($1)
 `;
 
-const findByProvider = `
+const findByGoogleId = `
   SELECT ${USER_FIELDS}
   FROM users
-  WHERE auth_provider = $1 AND provider_id = $2
+  WHERE google_id = $1
+`;
+
+const findByAppleId = `
+  SELECT ${USER_FIELDS}
+  FROM users
+  WHERE apple_id = $1
 `;
 
 const insertLocalUser = `
-  INSERT INTO users (email, username, password, auth_provider, display_name, account_type)
-  VALUES ($1, $2, $3, 'local', $4, $5)
+  INSERT INTO users (email, username, password, display_name, account_type)
+  VALUES ($1, $2, $3, $4, $5)
   RETURNING ${USER_FIELDS}
 `;
 
 const insertOAuthUser = `
-  INSERT INTO users (email, auth_provider, provider_id, display_name, account_type)
-  VALUES ($1, $2, $3, $4, 'personal')
+  INSERT INTO users (email, username, google_id, apple_id, display_name, account_type)
+  VALUES ($1, $2, $3, $4, $5, 'personal')
+  RETURNING ${USER_FIELDS}
+`;
+
+const linkGoogleId = `
+  UPDATE users
+  SET google_id = $2, updated_at = NOW()
+  WHERE user_id = $1
+  RETURNING ${USER_FIELDS}
+`;
+
+const linkAppleId = `
+  UPDATE users
+  SET apple_id = $2, updated_at = NOW()
+  WHERE user_id = $1
   RETURNING ${USER_FIELDS}
 `;
 
@@ -238,9 +259,12 @@ module.exports = {
   findById,
   findByEmail,
   findByUsername,
-  findByProvider,
+  findByGoogleId,
+  findByAppleId,
   insertLocalUser,
   insertOAuthUser,
+  linkGoogleId,
+  linkAppleId,
   linkOrganization,
   updateProfile,
   clearEmployer,

@@ -181,6 +181,14 @@ h6 {
   transform: scale(1.05);
 }
 
+.welcome-h-carousel {
+  scrollbar-width: none;
+}
+
+.welcome-h-carousel::-webkit-scrollbar {
+  display: none;
+}
+
 .welcome-timeline-pebble {
   width: 0.5rem;
   height: 0.5rem;
@@ -288,12 +296,13 @@ h6 {
   border-radius: 1.5rem;
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: 1rem;
   line-height: 1.4;
 }
 
 .pebble-place-autocomplete::part(input) {
   padding: 0.625rem 0.75rem;
+  font-size: 1rem;
 }
 
 .pebble-place-autocomplete::part(prediction-list) {
@@ -430,4 +439,42 @@ button.bg-accent .field-glyph {
 .pebble-map-pin--avatar svg[data-icon='penguin'] {
   width: 78%;
   height: 78%;
+}
+
+.media-preview {
+  object-fit: cover;
+  object-position: var(--media-x, 50%) var(--media-y, 50%);
+  transform: scale(var(--media-scale, 1));
+  transform-origin: var(--media-x, 50%) var(--media-y, 50%);
+}
+
+video.media-preview::-webkit-media-controls-overlay-play-button {
+  display: none;
+}
+
+/*
+ * WKWebView zooms the page when a focused field is under 16px.
+ * 1rem stays at the root size, including Places and field notes.
+ */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
+textarea,
+select,
+[contenteditable='true'] {
+  font-size: 1rem;
+}
+
+input[type='date'],
+input[type='time'] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type='date']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
 }

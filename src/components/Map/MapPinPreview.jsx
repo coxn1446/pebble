@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { PreviewImage } from '../Pebbles/MediaFrame';
+import { featuredMedia } from '../../helpers/mediaPreview';
 
 const MapPinPreview = ({ pebble, onClose }) => {
   if (!pebble) return null;
@@ -20,12 +22,13 @@ const MapPinPreview = ({ pebble, onClose }) => {
       className="absolute bottom-4 left-4 right-4 z-10 flex gap-3 rounded-2xl border border-border bg-surface p-3 shadow-sm animate-fade-up"
     >
       {pebble.hero_image_url ? (
-        <img
-          src={pebble.hero_image_url}
-          alt=""
-          data-testid="map-pin-preview-photo"
-          className="h-20 w-20 shrink-0 rounded-2xl object-cover"
-        />
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl">
+          <PreviewImage
+            item={featuredMedia(pebble)}
+            testId="map-pin-preview-photo"
+            className="h-full w-full"
+          />
+        </div>
       ) : null}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">

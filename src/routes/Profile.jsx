@@ -1,24 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import DeletePebbleConfirm from '../components/Pebbles/DeletePebbleConfirm';
-import PebbleCard from '../components/Pebbles/PebbleCard';
 import FlagDialog from '../components/Moderation/FlagDialog';
-import DeleteCollectionConfirm from '../components/Collections/DeleteCollectionConfirm';
+import Modal from '../components/Modal/Modal';
 import NewCollectionForm from '../components/Collections/NewCollectionForm';
 import UserAvatar from '../components/Profile/UserAvatar';
 import UserListModal from '../components/Profile/UserListModal';
-import { fieldIconForName } from '../components/Icons/Icons';
-import { selectUser } from '../store/auth.reducer';
-import { fetchUserProfile } from '../helpers/userHelpers';
-import {
-  addPebbleToCollection,
-  deleteCollection,
-  fetchCollections,
-} from '../helpers/collectionHelpers';
-import { deletePebble } from '../helpers/pebbleHelpers';
+import { GearIcon, fieldIconForName } from '../components/Icons/Icons';
+import { PreviewImage } from '../components/Pebbles/MediaFrame';
+import { featuredMedia } from '../helpers/mediaPreview';
+import { useMobileWelcome } from '../components/Welcome/WelcomeShared';
+import { selectUser, clearUser } from '../store/auth.reducer';
+import { logout } from '../helpers/authHelpers';
+import { fetchMyProfile, fetchUserProfile } from '../helpers/userHelpers';
+import { fetchCollections } from '../helpers/collectionHelpers';
 import { blockUser, followUser, unfollowUser } from '../helpers/socialHelpers';
+import Settings from './Settings';
+
+const actionClass = 'rounded-2xl border border-border px-3 py-1.5 text-sm text-ink';
+
+const DraftList = ({ drafts }) =>
+  drafts.length ? (
+    <ul className="space-y-2">
+      {drafts.map((pebble) => (
+        <li key={pebble.pebble_id}>
+          <Link
+            to={`/pebbles/${pebble.pebble_id}/edit`}
+            className="block min-w-0 rounded-2xl border border-border px-3 py-2 text-sm text-ink hover:border-accent"
+          >
+            {pebble.title || 'Untitled'}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p className="text-sm text-muted">No drafts.</p>
+  );
 
 const observationStamp = (pebble) => {
   if (pebble?.observed_at) {
@@ -46,12 +64,13 @@ const byObserved = (a, b) => {
 const tileClass =
   'relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-border bg-background';
 
-const GalleryTile = ({ imageUrl, title, fieldName }) => {
+const GalleryTile = ({ imageUrl, media, title, fieldName }) => {
   const FieldIcon = fieldName ? fieldIconForName(fieldName) : null;
+  const image = imageUrl ? featuredMedia({ hero_image_url: imageUrl, media }) : null;
   return (
     <div className={tileClass}>
-      {imageUrl ? (
-        <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {image ? (
+        <PreviewImage item={image} className="absolute inset-0 h-full w-full" />
       ) : FieldIcon ? (
         <FieldIcon className="h-8 w-8 text-accent" aria-hidden="true" />
       ) : null}
@@ -66,154 +85,50 @@ const GalleryTile = ({ imageUrl, title, fieldName }) => {
   );
 };
 
-const ProfileTiles = ({
-  view,
-  collections,
-  pebbles,
-  addingTo,
-  selectedIds,
-  viewerId,
-  onAdd,
-  onDelete,
-  onDeletePebble,
-  canDeletePebbles = false,
-  onTogglePebble,
-}) => {
+const ProfileTiles = ({ collections, pebbles }) => {
   const collected = new Set(
     collections.flatMap((collection) => (collection.pebble_ids || []).map((id) => Number(id)))
   );
   const published = [...pebbles].sort(byObserved);
-  const loose = addingTo ? published : published.filter((pebble) => !collected.has(Number(pebble.pebble_id)));
-
-  if (view === 'rows') {
-    return (
-      <div className="space-y-3" data-testid="profile-rows">
-        {collections.map((collection) => (
-          <div key={collection.collection_id} className="flex items-center justify-between gap-3 rounded-2xl border border-border px-3 py-2">
-            <Link to={`/collections/${collection.collection_id}`} className="font-medium text-ink">
-              {collection.name}
-            </Link>
-            <div className="flex shrink-0 gap-3">
-              <button type="button" className="text-sm text-accent" onClick={() => onAdd(collection.collection_id)}>
-                Add
-              </button>
-              {Number(collection.owner_id) === Number(viewerId) ? (
-                <button
-                  type="button"
-                  className="text-sm text-muted hover:text-ink"
-                  aria-label={`Delete ${collection.name}`}
-                  onClick={() => onDelete(collection)}
-                >
-                  Delete
-                </button>
-              ) : null}
-            </div>
-          </div>
-        ))}
-        {loose.map((pebble) =>
-          addingTo ? (
-            <button
-              key={pebble.pebble_id}
-              type="button"
-              aria-pressed={selectedIds.includes(pebble.pebble_id)}
-              onClick={() => onTogglePebble(pebble.pebble_id)}
-              className={`w-full rounded-2xl border border-border px-3 py-2 text-left text-sm text-ink ${
-                selectedIds.includes(pebble.pebble_id) ? 'ring-2 ring-accent' : ''
-              }`}
-            >
-              {pebble.title}
-            </button>
-          ) : (
-            <div key={pebble.pebble_id} className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <PebbleCard pebble={pebble} />
-              </div>
-              {canDeletePebbles ? (
-                <button
-                  type="button"
-                  className="shrink-0 text-sm text-muted hover:text-ink"
-                  aria-label={`Delete ${pebble.title || 'Untitled'}`}
-                  onClick={() => onDeletePebble(pebble)}
-                >
-                  Delete
-                </button>
-              ) : null}
-            </div>
-          )
-        )}
-      </div>
-    );
-  }
+  const loose = published.filter((pebble) => !collected.has(Number(pebble.pebble_id)));
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="profile-gallery">
-      {collections.map((collection) => (
-        <div key={collection.collection_id} className="space-y-2">
-          <Link to={`/collections/${collection.collection_id}`} aria-label={collection.name}>
-            <GalleryTile imageUrl={collection.cover_image_url} title={collection.name} />
-          </Link>
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              className="text-sm text-accent"
-              onClick={() => onAdd(collection.collection_id)}
+    <div className="space-y-6" data-testid="profile-gallery">
+      {collections.length ? (
+        <div className="grid grid-cols-3 gap-1" data-testid="profile-collections">
+          {collections.map((collection) => (
+            <Link
+              key={collection.collection_id}
+              to={`/collections/${collection.collection_id}`}
+              aria-label={collection.name}
             >
-              Add
-            </button>
-            {Number(collection.owner_id) === Number(viewerId) ? (
-              <button
-                type="button"
-                className="text-sm text-muted hover:text-ink"
-                aria-label={`Delete ${collection.name}`}
-                onClick={() => onDelete(collection)}
-              >
-                Delete
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ))}
-      {loose.map((pebble) => {
-        const fieldName = pebble.fields?.[0]?.name || pebble.phenomena?.[0]?.field_name;
-        const tile = (
-          <GalleryTile imageUrl={pebble.hero_image_url} title={pebble.title} fieldName={fieldName} />
-        );
-        if (addingTo) {
-          return (
-            <button
-              key={pebble.pebble_id}
-              type="button"
-              aria-pressed={selectedIds.includes(pebble.pebble_id)}
-              onClick={() => onTogglePebble(pebble.pebble_id)}
-              className={selectedIds.includes(pebble.pebble_id) ? 'rounded-2xl ring-2 ring-accent' : ''}
-            >
-              {tile}
-            </button>
-          );
-        }
-        return (
-          <div key={pebble.pebble_id} className="space-y-2">
-            <Link to={`/pebbles/${pebble.pebble_id}`} aria-label={pebble.title}>
-              {tile}
+              <GalleryTile imageUrl={collection.cover_image_url} title={collection.name} />
             </Link>
-            {canDeletePebbles ? (
-              <button
-                type="button"
-                className="text-sm text-muted hover:text-ink"
-                aria-label={`Delete ${pebble.title || 'Untitled'}`}
-                onClick={() => onDeletePebble(pebble)}
-              >
-                Delete
-              </button>
-            ) : null}
-          </div>
-        );
-      })}
+          ))}
+        </div>
+      ) : null}
+      <div className="grid grid-cols-3 gap-1" data-testid="profile-pebble-grid">
+        {loose.map((pebble) => {
+          const fieldName = pebble.fields?.[0]?.name || pebble.phenomena?.[0]?.field_name;
+          return (
+            <Link key={pebble.pebble_id} to={`/pebbles/${pebble.pebble_id}`} aria-label={pebble.title}>
+              <GalleryTile
+                imageUrl={pebble.hero_image_url}
+                media={pebble.media}
+                title={pebble.title}
+                fieldName={fieldName}
+              />
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 };
 
 const Profile = () => {
+  const dispatch = useDispatch();
+  const isMobile = useMobileWelcome();
   const { username: paramUsername } = useParams();
   const me = useSelector(selectUser);
   const username = paramUsername || me?.username;
@@ -221,21 +136,21 @@ const Profile = () => {
   const [pebbles, setPebbles] = useState([]);
   const [showFlag, setShowFlag] = useState(false);
   const [listMode, setListMode] = useState(null);
-  const [view, setView] = useState('gallery');
   const [collections, setCollections] = useState([]);
   const [showNewCollection, setShowNewCollection] = useState(false);
-  const [addingTo, setAddingTo] = useState(null);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [pendingDelete, setPendingDelete] = useState(null);
-  const [pendingPebble, setPendingPebble] = useState(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [profileError, setProfileError] = useState(null);
 
   const load = async () => {
-    if (!username) return;
+    const viewingSelf = Boolean(me?.user_id) && (!paramUsername || paramUsername === me.username);
+    if (!username && !viewingSelf) return;
+    setProfileError(null);
     try {
-      const data = await fetchUserProfile(username);
+      const data = username ? await fetchUserProfile(username) : await fetchMyProfile();
       setProfile(data.user);
       setPebbles(data.pebbles || []);
-      const viewingSelf = Boolean(me) && (!paramUsername || paramUsername === me.username);
       if (!viewingSelf) {
         setCollections([]);
       } else {
@@ -247,6 +162,8 @@ const Profile = () => {
         }
       }
     } catch (err) {
+      setProfile(null);
+      setProfileError(err.message || 'Profile not found');
       toast.error(err.message || 'Profile not found');
     }
   };
@@ -255,104 +172,109 @@ const Profile = () => {
     setProfile(null);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username]);
+  }, [username, me?.user_id]);
 
-  if (!username) return <p className="text-sm text-muted">Loading…</p>;
+  useEffect(() => {
+    const refresh = () => {
+      const viewingSelf = Boolean(me?.user_id) && (!paramUsername || paramUsername === me.username);
+      if (!viewingSelf) return;
+      fetchCollections()
+        .then(setCollections)
+        .catch(() => {});
+    };
+    window.addEventListener('pebble-collections-changed', refresh);
+    return () => window.removeEventListener('pebble-collections-changed', refresh);
+  }, [me?.user_id, me?.username, paramUsername]);
+
+  if (!username && !me?.user_id) return <p className="text-sm text-muted">Loading…</p>;
+  if (profileError) return <p className="text-sm text-muted">{profileError}</p>;
   if (!profile) return <p className="text-sm text-muted">Loading…</p>;
 
   const isSelf = Number(me?.user_id) === Number(profile.user_id);
+  const publishedCount = pebbles.filter((pebble) => pebble.status !== 'draft').length;
+  const drafts = pebbles.filter((pebble) => pebble.status === 'draft');
+
+  const handleLogout = async () => {
+    await logout();
+    dispatch(clearUser());
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-4">
-          <UserAvatar
-            user={profile}
-            className="h-16 w-16 rounded-full"
-          />
-          <div>
-            <h1 className="font-display text-2xl font-semibold text-ink">
-              {profile.display_name || profile.username}
-            </h1>
-            <p className="text-sm text-muted">@{profile.username}</p>
-            <div className="mt-2 flex flex-wrap gap-4 text-sm text-ink">
-              <button
-                type="button"
-                onClick={() => setListMode('followers')}
-                className="hover:underline"
-              >
-                <span className="font-semibold">{profile.follower_count ?? 0}</span>{' '}
-                <span className="text-muted">Followers</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setListMode('following')}
-                className="hover:underline"
-              >
-                <span className="font-semibold">{profile.following_count ?? 0}</span>{' '}
-                <span className="text-muted">Following</span>
-              </button>
-            </div>
-            {profile.blurb?.trim() ? (
-              <p className="mt-2 text-sm text-ink" data-testid="profile-blurb">
-                {profile.blurb.trim()}
-              </p>
-            ) : null}
-            {profile.profession ? <p className="mt-2 text-sm text-ink">{profile.profession}</p> : null}
-            {profile.field_of_study ? (
-              <p className="text-sm text-muted">{profile.field_of_study}</p>
-            ) : null}
-            {profile.place_name ? <p className="text-sm text-muted">{profile.place_name}</p> : null}
-            {profile.employer ? (
-              <p className="text-sm text-muted">Employer: {profile.employer.name}</p>
-            ) : null}
+      <div className="flex items-center gap-4">
+        <UserAvatar user={profile} className="h-16 w-16 shrink-0 rounded-full" />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-xl font-semibold text-ink">
+            {profile.display_name || profile.username}
+          </h1>
+          {profile.username ? <p className="text-sm text-muted">@{profile.username}</p> : null}
+          <div className="mt-2 flex flex-wrap gap-4 text-sm text-ink">
+            <p>
+              <span className="font-semibold">{publishedCount}</span>{' '}
+              <span className="text-muted">Pebbles</span>
+            </p>
+            <button type="button" onClick={() => setListMode('followers')} className="hover:underline">
+              <span className="font-semibold">{profile.follower_count ?? 0}</span>{' '}
+              <span className="text-muted">Followers</span>
+            </button>
+            <button type="button" onClick={() => setListMode('following')} className="hover:underline">
+              <span className="font-semibold">{profile.following_count ?? 0}</span>{' '}
+              <span className="text-muted">Following</span>
+            </button>
           </div>
         </div>
-        {!isSelf ? (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  if (profile.is_following) {
-                    await unfollowUser(profile.user_id);
-                  } else {
-                    await followUser(profile.user_id);
-                  }
-                  load();
-                } catch (err) {
-                  toast.error(err.message);
-                }
-              }}
-              className="rounded-2xl bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-hover"
-            >
-              {profile.is_following ? 'Unfollow' : 'Follow'}
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await blockUser(profile.user_id);
-                  toast.success('User blocked');
-                } catch (err) {
-                  toast.error(err.message);
-                }
-              }}
-              className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
-            >
-              Block
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFlag(true)}
-              className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
-            >
-              Report
-            </button>
-          </div>
+        {isSelf && isMobile ? (
+          <button
+            type="button"
+            aria-label="Profile menu"
+            onClick={() => setShowMenu(true)}
+            className="shrink-0 rounded-2xl border border-border p-2 text-ink"
+          >
+            <GearIcon className="h-5 w-5" />
+          </button>
         ) : null}
       </div>
-      {isSelf ? (
+      {profile.blurb?.trim() ? (
+        <p className="text-sm text-ink" data-testid="profile-blurb">
+          {profile.blurb.trim()}
+        </p>
+      ) : null}
+      {profile.profession ? <p className="text-sm text-ink">{profile.profession}</p> : null}
+      {profile.field_of_study ? <p className="text-sm text-muted">{profile.field_of_study}</p> : null}
+      {profile.place_name ? <p className="text-sm text-muted">{profile.place_name}</p> : null}
+      {profile.employer ? (
+        <p className="text-sm text-muted">Employer: {profile.employer.name}</p>
+      ) : null}
+      {showMenu ? (
+        <Modal open title="Profile menu" testId="profile-menu" onClose={() => setShowMenu(false)}>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowMenu(false);
+                setShowEdit(true);
+              }}
+              className={actionClass}
+            >
+              Edit profile
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMenu(false);
+                setShowDrafts(true);
+              }}
+              className={actionClass}
+            >
+              Drafts
+            </button>
+            <button type="button" onClick={handleLogout} className={actionClass}>
+              Sign out
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+      {isSelf && !isMobile ? (
         <div className="flex flex-wrap gap-2">
           <Link
             to="/pebbles/new"
@@ -363,49 +285,65 @@ const Profile = () => {
           <button
             type="button"
             onClick={() => setShowNewCollection((open) => !open)}
-            className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+            className={actionClass}
           >
             New collection
           </button>
-          <Link
-            to="/?mine=1"
-            className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
-          >
+          <Link to="/?mine=1" className={actionClass}>
             Map
           </Link>
-          <Link
-            to="/settings"
-            className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
-          >
+          <Link to="/settings" className={actionClass}>
             Edit profile
           </Link>
         </div>
       ) : null}
-      {isSelf && pebbles.some((pebble) => pebble.status === 'draft') ? (
+      {!isSelf ? (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                if (profile.is_following) {
+                  await unfollowUser(profile.user_id);
+                } else {
+                  await followUser(profile.user_id);
+                }
+                load();
+              } catch (err) {
+                toast.error(err.message);
+              }
+            }}
+            className="rounded-2xl bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-hover"
+          >
+            {profile.is_following ? 'Unfollow' : 'Follow'}
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await blockUser(profile.user_id);
+                toast.success('User blocked');
+              } catch (err) {
+                toast.error(err.message);
+              }
+            }}
+            className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+          >
+            Block
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFlag(true)}
+            className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+          >
+            Report
+          </button>
+        </div>
+      ) : null}
+      {isSelf && !isMobile && drafts.length ? (
         <div className="space-y-2">
           <h2 className="font-display text-lg font-semibold text-ink">Drafts</h2>
-          <ul className="space-y-2">
-            {pebbles
-              .filter((pebble) => pebble.status === 'draft')
-              .map((pebble) => (
-                <li key={pebble.pebble_id} className="flex items-center gap-3">
-                  <Link
-                    to={`/pebbles/${pebble.pebble_id}/edit`}
-                    className="block min-w-0 flex-1 rounded-2xl border border-border px-3 py-2 text-sm text-ink hover:border-accent"
-                  >
-                    {pebble.title || 'Untitled'}
-                  </Link>
-                  <button
-                    type="button"
-                    className="shrink-0 text-sm text-muted hover:text-ink"
-                    aria-label={`Delete ${pebble.title || 'Untitled'}`}
-                    onClick={() => setPendingPebble(pebble)}
-                  >
-                    Delete
-                  </button>
-                </li>
-              ))}
-          </ul>
+          <DraftList drafts={drafts} />
         </div>
       ) : null}
       {isSelf && showNewCollection ? (
@@ -417,78 +355,9 @@ const Profile = () => {
           }}
         />
       ) : null}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex rounded-2xl border border-border p-0.5" role="group" aria-label="Profile layout">
-          <button
-            type="button"
-            aria-pressed={view === 'gallery'}
-            onClick={() => setView('gallery')}
-            className={`rounded-2xl px-3 py-1.5 text-sm ${view === 'gallery' ? 'bg-accent text-white' : 'text-ink'}`}
-          >
-            Gallery
-          </button>
-          <button
-            type="button"
-            aria-pressed={view === 'rows'}
-            onClick={() => setView('rows')}
-            className={`rounded-2xl px-3 py-1.5 text-sm ${view === 'rows' ? 'bg-accent text-white' : 'text-ink'}`}
-          >
-            Rows
-          </button>
-        </div>
-        {addingTo ? (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded-2xl bg-accent px-3 py-1.5 text-sm text-white"
-              onClick={async () => {
-                try {
-                  for (const pebbleId of selectedIds) {
-                    await addPebbleToCollection(addingTo, pebbleId);
-                  }
-                  toast.success('Pebbles added');
-                  setAddingTo(null);
-                  setSelectedIds([]);
-                  setCollections(await fetchCollections());
-                } catch (err) {
-                  toast.error(err.message);
-                }
-              }}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
-              onClick={() => {
-                setAddingTo(null);
-                setSelectedIds([]);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        ) : null}
-      </div>
       <ProfileTiles
-        view={view}
         collections={isSelf ? collections : []}
         pebbles={pebbles.filter((pebble) => pebble.status !== 'draft')}
-        addingTo={addingTo}
-        selectedIds={selectedIds}
-        viewerId={me?.user_id}
-        canDeletePebbles={isSelf}
-        onDeletePebble={setPendingPebble}
-        onAdd={(collectionId) => {
-          setAddingTo(collectionId);
-          setSelectedIds([]);
-        }}
-        onDelete={setPendingDelete}
-        onTogglePebble={(pebbleId) => {
-          setSelectedIds((prev) =>
-            prev.includes(pebbleId) ? prev.filter((id) => id !== pebbleId) : [...prev, pebbleId]
-          );
-        }}
       />
       {showFlag ? (
         <FlagDialog
@@ -497,40 +366,20 @@ const Profile = () => {
           onClose={() => setShowFlag(false)}
         />
       ) : null}
-      <DeleteCollectionConfirm
-        collection={pendingDelete}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={async () => {
-          if (!pendingDelete) return;
-          try {
-            await deleteCollection(pendingDelete.collection_id);
-            if (addingTo === pendingDelete.collection_id) {
-              setAddingTo(null);
-              setSelectedIds([]);
-            }
-            setPendingDelete(null);
-            setCollections(await fetchCollections());
-            toast.success('Collection deleted');
-          } catch (err) {
-            toast.error(err.message || 'Could not delete collection');
-          }
-        }}
-      />
-      <DeletePebbleConfirm
-        pebble={pendingPebble}
-        onCancel={() => setPendingPebble(null)}
-        onConfirm={async () => {
-          if (!pendingPebble) return;
-          try {
-            await deletePebble(pendingPebble.pebble_id);
-            setPendingPebble(null);
-            setPebbles((prev) => prev.filter((item) => item.pebble_id !== pendingPebble.pebble_id));
-            toast.success('Pebble deleted');
-          } catch (err) {
-            toast.error(err.message || 'Could not delete pebble');
-          }
-        }}
-      />
+      {showEdit ? (
+          <Settings
+            onBack={() => setShowEdit(false)}
+            onSaved={() => {
+              setShowEdit(false);
+              load();
+            }}
+          />
+      ) : null}
+      {showDrafts ? (
+        <Modal open title="Drafts" testId="drafts-modal" onClose={() => setShowDrafts(false)}>
+          <DraftList drafts={drafts} />
+        </Modal>
+      ) : null}
       {listMode ? (
         <UserListModal
           username={profile.username}

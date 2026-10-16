@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import FormModal, { formPrimaryClass } from '../components/Modal/FormModal';
 import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import PlaceAutocomplete from '../components/Places/PlaceAutocomplete';
@@ -14,10 +15,12 @@ import {
 } from '../helpers/notificationHelpers';
 
 const inputClass =
-  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-accent';
+  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-accent';
 
-const Settings = () => {
+const Settings = ({ onBack, onSaved }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState(null);
   const [previewUser, setPreviewUser] = useState(null);
   const [orgQuery, setOrgQuery] = useState('');
@@ -60,6 +63,15 @@ const Settings = () => {
       .catch((err) => toast.error(err.message));
   }, [dispatch]);
 
+  useEffect(() => {
+    const linked = searchParams.get('linked');
+    if (linked === 'google') toast.success('Google connected');
+    if (linked === 'apple') toast.success('Apple connected');
+    if (searchParams.get('error') === 'conflict') {
+      toast.error('That account is already linked to someone else');
+    }
+  }, [searchParams]);
+
   if (!form) return <p className="text-sm text-muted">Loading…</p>;
 
   const avatarPreview = {
@@ -71,8 +83,10 @@ const Settings = () => {
   };
 
   return (
-    <form
-      className="space-y-4"
+    <FormModal
+      title="Edit profile"
+      testId="edit-profile-modal"
+      onBack={onBack || (() => navigate('/profile'))}
       onSubmit={async (e) => {
         e.preventDefault();
         setSaving(true);
@@ -101,31 +115,20 @@ const Settings = () => {
           dispatch(setUser(user));
           setPreviewUser(user);
           toast.success('Profile updated');
+          onSaved?.();
         } catch (err) {
           toast.error(err.message);
         } finally {
           setSaving(false);
         }
       }}
+      actions={
+        <button type="submit" disabled={saving || uploadingPic} className={formPrimaryClass}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      }
     >
-      <div className="sticky top-0 z-20 -mx-6 border-b border-border bg-background/95 px-6 py-4 backdrop-blur-md">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Link to="/profile" className="text-sm text-muted hover:text-ink">
-              ← Profile
-            </Link>
-            <h1 className="mt-1 font-display text-2xl font-semibold text-ink">Edit profile</h1>
-          </div>
-          <button
-            type="submit"
-            disabled={saving || uploadingPic}
-            className="rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
-          >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
-        </div>
-      </div>
-
+      <div className="space-y-4">
       <div className="flex items-center gap-4">
         <UserAvatar
           user={avatarPreview}
@@ -280,6 +283,42 @@ const Settings = () => {
       </label>
 
       <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
+        <h2 className="font-display text-lg font-semibold text-ink">Sign in</h2>
+        <div className="flex items-center justify-between text-sm text-ink">
+          <span>Password</span>
+          <span className="text-muted">{previewUser?.has_password ? 'Connected' : 'Not connected'}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm text-ink">
+          <span>Google</span>
+          {previewUser?.google_id ? (
+            <span className="text-muted">Connected</span>
+          ) : (
+            <a
+              href="/api/auth/google?link=1&return=/settings"
+              aria-label="Connect Google"
+              className="font-medium text-ocean hover:underline"
+            >
+              Connect
+            </a>
+          )}
+        </div>
+        <div className="flex items-center justify-between text-sm text-ink">
+          <span>Apple</span>
+          {previewUser?.apple_id ? (
+            <span className="text-muted">Connected</span>
+          ) : (
+            <a
+              href="/api/auth/apple?link=1&return=/settings"
+              aria-label="Connect Apple"
+              className="font-medium text-ocean hover:underline"
+            >
+              Connect
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
         <h2 className="font-display text-lg font-semibold text-ink">Notifications</h2>
         <p className="text-sm text-muted">Choose which in-app alerts you receive.</p>
         <label className="flex items-center gap-2 text-sm text-ink">
@@ -299,7 +338,8 @@ const Settings = () => {
           Notify me when someone likes my pebble
         </label>
       </div>
-    </form>
+      </div>
+    </FormModal>
   );
 };
 

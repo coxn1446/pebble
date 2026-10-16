@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { MOBILE_WELCOME_QUERY } from '../components/Welcome/WelcomeShared';
 import Map from '../routes/Map';
 
 const mockNavigate = jest.fn();
@@ -24,6 +25,7 @@ jest.mock('../helpers/userHelpers', () => ({
 
 jest.mock('../helpers/taxonomyHelpers', () => ({
   fetchFields: jest.fn(async () => [{ field_id: 1, name: 'Biology' }]),
+  fetchPhenomena: jest.fn(async () => []),
 }));
 
 jest.mock('../helpers/searchHelpers', () => ({
@@ -80,9 +82,23 @@ const renderMapRoute = (entry = '/') =>
     </MemoryRouter>
   );
 
+const mockMatchMedia = (matches) => {
+  window.matchMedia.mockImplementation((query) => ({
+    matches: typeof matches === 'function' ? matches(query) : Boolean(matches),
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }));
+};
+
 describe('Map route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockMatchMedia(false);
     fetchMapUsers.mockResolvedValue([]);
     fetchFeed.mockResolvedValue([]);
     searchPebbles.mockResolvedValue([]);
@@ -110,7 +126,7 @@ describe('Map route', () => {
     expect(screen.getByRole('heading', { name: 'Map' })).toBeInTheDocument();
   });
 
-  test('filters feed list when viewport changes', async () => {
+  test('keeps the newest feed when the viewport changes', async () => {
     const user = userEvent.setup();
     fetchFeed.mockResolvedValue([
       {
@@ -137,11 +153,8 @@ describe('Map route', () => {
 
     await user.click(screen.getByRole('button', { name: 'Set viewport' }));
 
-    await waitFor(() => {
-      expect(screen.getByText('In view')).toBeInTheDocument();
-      expect(screen.queryByText('Far away')).not.toBeInTheDocument();
-    });
-    // Feed is viewport-filtered; map keeps all search/feed pins to avoid sync flicker.
+    expect(screen.getByText('In view')).toBeInTheDocument();
+    expect(screen.getByText('Far away')).toBeInTheDocument();
     expect(screen.getByTestId('pebble-map')).toHaveTextContent('pins:2');
   });
 
@@ -188,7 +201,7 @@ describe('Map route', () => {
       },
     ]);
 
-    await user.type(screen.getByLabelText(/Search people or places/i), 'kait');
+    await user.type(screen.getByLabelText(/search for pebbles/i), 'kait');
     expect(await screen.findByText('Kaitlin')).toBeInTheDocument();
     await user.click(screen.getByText('Kaitlin'));
 
@@ -230,7 +243,7 @@ describe('Map route', () => {
     await screen.findByTestId('map-feed-panel');
     expect(screen.getByTestId('map-focus')).toHaveTextContent('none');
 
-    await user.type(screen.getByLabelText(/Search people or places/i), 'rom');
+    await user.type(screen.getByLabelText(/search for pebbles/i), 'rom');
     expect(await screen.findByText('Rome')).toBeInTheDocument();
     await user.click(screen.getByText('Rome'));
 
@@ -336,6 +349,12 @@ describe('Map route', () => {
     renderMapRoute();
     await user.click(await screen.findByRole('button', { name: /Advanced search/i }));
     expect(screen.getByText('Topic')).toBeInTheDocument();
+    const field = screen.getByText('Field');
+    const topic = screen.getByText('Topic');
+    const notes = screen.getByText('Field notes');
+    expect(field.compareDocumentPosition(topic) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(topic.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByPlaceholderText('Keywords')).not.toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'Community favorites' }));
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
     await waitFor(() => {
@@ -343,7 +362,60 @@ describe('Map route', () => {
     });
   });
 
-  test('says when matches are not pinned', async () => {
+  test('field note terms are added with return and sent together', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([]);
+    renderMapRoute();
+    await user.click(await screen.findByRole('button', { name: /Advanced search/i }));
+    const notes = screen.getByLabelText('Field notes');
+    await user.type(notes, 'earth{Enter}ice{Enter}');
+    expect(screen.getByRole('button', { name: 'earth ×' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ice ×' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await waitFor(() => {
+      expect(searchPebbles).toHaveBeenCalledWith(
+        expect.objectContaining({ notes: ['earth', 'ice'] })
+      );
+    });
+  });
+
+  test('author search lists matching people', async () => {
+    const user = userEvent.setup();
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([]);
+    const { fetchSearchSuggestions } = require('../helpers/searchHelpers');
+    fetchSearchSuggestions.mockResolvedValue([
+      {
+        type: 'user',
+        id: 'user-2',
+        label: 'will',
+        subtitle: '@will',
+        username: 'will',
+        value: 'will',
+      },
+      {
+        type: 'user',
+        id: 'user-18',
+        label: 'William Nash',
+        subtitle: '@wwn',
+        username: 'wwn',
+        value: 'wwn',
+      },
+    ]);
+    renderMapRoute();
+    await user.click(await screen.findByRole('button', { name: /Advanced search/i }));
+    await user.type(screen.getByLabelText('Author'), 'will');
+    expect(await screen.findByRole('button', { name: /@will/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /@wwn/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /@wwn/i }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await waitFor(() => {
+      expect(searchPebbles).toHaveBeenCalledWith(expect.objectContaining({ author: 'wwn' }));
+    });
+  });
+
+  test('lists a match that is not pinned on the map', async () => {
     fetchFeed.mockResolvedValue([]);
     searchPebbles.mockResolvedValue([
       { pebble_id: 9, title: 'Fish Islands', place_name: 'Fish Islands', like_count: 0 },
@@ -355,9 +427,10 @@ describe('Map route', () => {
       { type: 'place', id: 'p', label: 'Fish Islands', value: 'Fish Islands' },
     ]);
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/Search people or places/i), 'fish');
+    await user.type(screen.getByLabelText(/search for pebbles/i), 'fish');
     await user.click(await screen.findByText('Fish Islands'));
-    expect(await screen.findByText('Nothing in this view is pinned to the map.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Fish Islands' })).toBeInTheDocument();
+    expect(screen.getByTestId('pebble-map')).toHaveTextContent('pins:0');
   });
 
   test('media checkboxes are sent with search', async () => {
@@ -402,11 +475,16 @@ describe('Map route', () => {
     expect(await screen.findByText('In view')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Set viewport' }));
     await user.click(screen.getByRole('button', { name: /Advanced search/i }));
-    await user.selectOptions(screen.getByRole('combobox'), '1');
+    const { fetchSearchSuggestions } = require('../helpers/searchHelpers');
+    fetchSearchSuggestions.mockResolvedValue([
+      { type: 'field', id: 'field-1', label: 'Biology', field_id: 1, field_name: 'Biology', value: 'Biology' },
+    ]);
+    await user.type(screen.getByLabelText('Field'), 'Bio');
+    await user.click(await screen.findByRole('button', { name: /Biology/i }));
     await user.click(screen.getByRole('checkbox', { name: 'Has photo' }));
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
     expect(await screen.findByText('Antarctic biology')).toBeInTheDocument();
-    expect(screen.queryByText('No pebbles in this view.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No pebbles yet.')).not.toBeInTheDocument();
     expect(screen.getByTestId('map-focus')).toHaveTextContent('-75.2,-0.1');
     expect(searchPebbles).toHaveBeenCalledWith(
       expect.objectContaining({ fieldId: '1', hasPhoto: true })
@@ -432,7 +510,7 @@ describe('Map route', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Has photo' }));
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
     expect(await screen.findByText('Nothing matched.')).toBeInTheDocument();
-    expect(screen.queryByText('No pebbles in this view.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No pebbles yet.')).not.toBeInTheDocument();
     expect(screen.queryByText('In view')).not.toBeInTheDocument();
   });
 
@@ -455,5 +533,56 @@ describe('Map route', () => {
     await waitFor(() => {
       expect(searchPebbles).toHaveBeenCalledWith(expect.objectContaining({ mine: true }));
     });
+  });
+
+  test('phone keeps search over the map and a collapsed feed sheet', async () => {
+    const user = userEvent.setup();
+    mockMatchMedia((query) => query === MOBILE_WELCOME_QUERY);
+    fetchFeed.mockResolvedValue([
+      {
+        pebble_id: 1,
+        title: 'Portland',
+        place_lat: 43.65,
+        place_lng: -70.25,
+        author_username: 'ada',
+        like_count: 0,
+      },
+    ]);
+    renderMapRoute();
+
+    expect(await screen.findByTestId('map-layout')).toHaveAttribute('data-layout', 'sheet');
+    expect(screen.getByTestId('map-feed-panel')).toHaveAttribute('data-sheet', 'peek');
+    expect(screen.getByLabelText(/search for pebbles/i)).toHaveClass('text-base');
+    expect(screen.queryByRole('button', { name: 'Expand map' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Portland')).not.toBeInTheDocument();
+    expect(screen.getByText('Newest')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Expand feed' }));
+    expect(screen.getByTestId('map-feed-panel')).toHaveAttribute('data-sheet', 'open');
+    expect(screen.getByText('Portland')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mine' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New pebble' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Collapse feed' }));
+    expect(screen.getByTestId('map-feed-panel')).toHaveAttribute('data-sheet', 'peek');
+    expect(screen.queryByText('Portland')).not.toBeInTheDocument();
+  });
+
+  test('phone still opens a focused pebble preview', async () => {
+    mockMatchMedia((query) => query === MOBILE_WELCOME_QUERY);
+    fetchFeed.mockResolvedValue([]);
+    searchPebbles.mockResolvedValue([]);
+    fetchPebble.mockResolvedValue({
+      pebble_id: 8,
+      title: 'Shelf ice',
+      description: 'At a glance',
+      place_lat: 12,
+      place_lng: 34,
+      phenomena: [],
+    });
+    renderMapRoute('/?pebble=8');
+    expect(await screen.findByTestId('map-pin-preview')).toHaveTextContent('Shelf ice');
+    expect(screen.getByTestId('map-layout')).toHaveAttribute('data-layout', 'sheet');
+    expect(screen.getByTestId('map-focus')).toHaveTextContent('12,34');
   });
 });

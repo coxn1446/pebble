@@ -6,11 +6,13 @@ import DeleteCollectionConfirm from '../components/Collections/DeleteCollectionC
 import { selectUser } from '../store/auth.reducer';
 import {
   acceptCollectionInvite,
+  addPebbleToCollection,
   deleteCollection,
   fetchCollection,
   inviteToCollection,
   removePebbleFromCollection,
 } from '../helpers/collectionHelpers';
+import { fetchUserProfile } from '../helpers/userHelpers';
 
 const CollectionDetail = () => {
   const { id } = useParams();
@@ -19,6 +21,9 @@ const CollectionDetail = () => {
   const [collection, setCollection] = useState(null);
   const [inviteUserId, setInviteUserId] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [candidates, setCandidates] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const load = async () => {
     try {
@@ -43,7 +48,10 @@ const CollectionDetail = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink">{collection.name}</h1>
+        <Link to="/profile" className="text-sm text-muted hover:text-ink">
+          Back
+        </Link>
+        <h1 className="mt-2 font-display text-2xl font-semibold text-ink">{collection.name}</h1>
         <p className="text-sm text-muted">
           {collection.is_private ? 'Private' : 'Public'}
           {collection.is_collaborative ? ' · Collaborate' : ''}
@@ -59,6 +67,85 @@ const CollectionDetail = () => {
           </button>
         ) : null}
       </div>
+      {isOwner ? (
+        <div className="space-y-3">
+          <button
+            type="button"
+            className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+            onClick={async () => {
+              if (adding) {
+                setAdding(false);
+                setSelectedIds([]);
+                return;
+              }
+              try {
+                const data = await fetchUserProfile(user.username);
+                const memberIds = new Set((collection.pebbles || []).map((pebble) => Number(pebble.pebble_id)));
+                setCandidates(
+                  (data.pebbles || []).filter(
+                    (pebble) => pebble.status !== 'draft' && !memberIds.has(Number(pebble.pebble_id))
+                  )
+                );
+                setSelectedIds([]);
+                setAdding(true);
+              } catch (err) {
+                toast.error(err.message || 'Could not load pebbles');
+              }
+            }}
+          >
+            {adding ? 'Cancel' : 'Add pebbles'}
+          </button>
+          {adding ? (
+            <div className="space-y-2" data-testid="collection-add-list">
+              {candidates.length === 0 ? (
+                <p className="text-sm text-muted">No pebbles to add.</p>
+              ) : (
+                candidates.map((pebble) => (
+                  <button
+                    key={pebble.pebble_id}
+                    type="button"
+                    aria-pressed={selectedIds.includes(pebble.pebble_id)}
+                    onClick={() =>
+                      setSelectedIds((prev) =>
+                        prev.includes(pebble.pebble_id)
+                          ? prev.filter((id) => id !== pebble.pebble_id)
+                          : [...prev, pebble.pebble_id]
+                      )
+                    }
+                    className={`w-full rounded-2xl border border-border px-3 py-2 text-left text-sm text-ink ${
+                      selectedIds.includes(pebble.pebble_id) ? 'ring-2 ring-accent' : ''
+                    }`}
+                  >
+                    {pebble.title}
+                  </button>
+                ))
+              )}
+              {selectedIds.length ? (
+                <button
+                  type="button"
+                  className="rounded-2xl bg-accent px-3 py-1.5 text-sm text-white"
+                  onClick={async () => {
+                    try {
+                      let next = collection;
+                      for (const pebbleId of selectedIds) {
+                        next = await addPebbleToCollection(id, pebbleId);
+                      }
+                      setCollection(next);
+                      setAdding(false);
+                      setSelectedIds([]);
+                      toast.success('Pebbles added');
+                    } catch (err) {
+                      toast.error(err.message || 'Could not add pebbles');
+                    }
+                  }}
+                >
+                  Save
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {pendingInvite ? (
         <button
           type="button"
@@ -77,7 +164,7 @@ const CollectionDetail = () => {
       ) : null}
       {isOwner && collection.is_collaborative ? (
         <form
-          className="flex gap-2"
+          className="flex flex-col gap-2 sm:flex-row"
           onSubmit={async (e) => {
             e.preventDefault();
             try {
@@ -95,7 +182,7 @@ const CollectionDetail = () => {
             value={inviteUserId}
             onChange={(e) => setInviteUserId(e.target.value)}
             placeholder="User id to invite"
-            className="w-full rounded-2xl border border-border px-3 py-2 text-sm outline-none focus:border-accent"
+            className="min-w-0 w-full rounded-2xl border border-border px-3 py-2 text-base text-ink outline-none focus:border-accent"
           />
           <button type="submit" className="rounded-2xl border border-border px-3 py-2 text-sm">
             Invite
@@ -108,7 +195,7 @@ const CollectionDetail = () => {
             key={p.pebble_id}
             className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3"
           >
-            <Link to={`/pebbles/${p.pebble_id}`} className="text-ink hover:text-accent">
+            <Link to={`/pebbles/${p.pebble_id}`} className="min-w-0 flex-1 break-words text-ink hover:text-accent">
               {p.title}
             </Link>
             {isOwner ? (
@@ -121,7 +208,7 @@ const CollectionDetail = () => {
                     toast.error(err.message);
                   }
                 }}
-                className="text-xs text-muted hover:text-ink"
+                className="shrink-0 text-xs text-muted hover:text-ink"
               >
                 Remove
               </button>

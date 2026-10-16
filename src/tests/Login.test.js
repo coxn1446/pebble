@@ -1,12 +1,18 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import toast from 'react-hot-toast';
+
+jest.mock('react-hot-toast', () => ({
+  __esModule: true,
+  default: { error: jest.fn(), success: jest.fn() },
+}));
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import Login from '../routes/Login';
 import authReducer from '../store/auth.reducer';
 
-const renderLogin = () => {
+const renderLogin = (initialEntry = '/login') => {
   const store = configureStore({
     reducer: { auth: authReducer },
     preloadedState: {
@@ -16,7 +22,7 @@ const renderLogin = () => {
 
   return render(
     <Provider store={store}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <Login />
       </MemoryRouter>
     </Provider>
@@ -58,5 +64,11 @@ describe('Login', () => {
       'group-hover:invert'
     );
     expect(screen.getByRole('button', { name: 'Sign in' })).toHaveClass('group', 'px-6', 'py-1.5');
+  });
+
+  test('explains a failed Google sign-in', async () => {
+    renderLogin('/login?error=google');
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Sign in did not complete'));
   });
 });

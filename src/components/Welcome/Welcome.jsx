@@ -67,7 +67,7 @@ const AUDIENCES = [
 const WelcomeHero = () => (
   <section id="hero" className={`${sectionClassName} relative`}>
     <WelcomeHeader />
-    <div className={`${sectionPadClassName} overflow-y-auto`}>
+    <div className={`${sectionPadClassName} overflow-hidden md:overflow-y-auto`}>
       <div className="mx-auto my-auto flex w-full max-w-3xl flex-col items-center gap-6 text-center animate-fade-up md:gap-8">
         <div className="flex items-center gap-3 md:gap-5">
           <BrandMark size="hero" showWordmark={false} to={null} animated />
@@ -111,7 +111,7 @@ const AudienceSection = () => (
   <section id="audience" className={sectionClassName}>
     <div
       data-testid="audience-stage"
-      className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-4 py-16 md:px-8 md:py-20"
+      className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-4 py-8 md:overflow-y-auto md:px-8 md:py-20"
     >
       <div className="mx-auto w-full max-w-6xl">
         <SectionHeader
@@ -120,7 +120,7 @@ const AudienceSection = () => (
           className="mb-0"
           titleClassName="leading-none"
         />
-        <div className="h-16 shrink-0" data-testid="audience-gap" />
+        <div className="h-8 shrink-0 md:h-16" data-testid="audience-gap" />
 
         <div className="grid grid-cols-2 items-start gap-x-3 gap-y-6 lg:grid-cols-4 lg:gap-x-4 lg:gap-y-8">
           {AUDIENCES.map(({ title, description, src }) => (
@@ -132,7 +132,7 @@ const AudienceSection = () => (
           ))}
         </div>
 
-        <div className="h-16 shrink-0" data-testid="audience-gap" />
+        <div className="h-8 shrink-0 md:h-16" data-testid="audience-gap" />
         <p data-testid="audience-note" className="text-center text-sm italic leading-none text-moss">
           Note: Pebble is organized for science-related disciplines
         </p>
@@ -145,7 +145,7 @@ const MethodologySection = () => (
   <section id="methodology" className={sectionClassName}>
     <div
       data-testid="methodology-body"
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-16 pb-8 md:px-8 md:pt-20"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-6 pb-4 md:overflow-y-auto md:px-8 md:pt-20 md:pb-8"
     >
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 lg:grid-cols-2 lg:gap-12">
         <div className="flex w-full min-h-0 flex-col" data-testid="methodology-copy">
@@ -163,7 +163,7 @@ const MethodologySection = () => (
             titleClassName="leading-tight"
           />
           <div className="flex flex-col gap-6">
-            <p className="max-w-lg text-base leading-relaxed text-ink/70">
+            <p className="hidden max-w-lg text-base leading-relaxed text-ink/70 md:block">
               The Pebble platform operates on a simple, iterative cycle — gathering individual
               observations (pebbles) to construct a robust, interconnected catalog of our world.
             </p>
@@ -186,7 +186,7 @@ const MethodologySection = () => (
                       {step.number}
                     </span>
                   </div>
-                  <div className={`min-w-0 flex-1 ${index < METHODOLOGY_STEPS.length - 1 ? 'pb-6' : ''}`}>
+                  <div className={`min-w-0 flex-1 ${index < METHODOLOGY_STEPS.length - 1 ? 'pb-4 md:pb-6' : ''}`}>
                     <h3 className="mb-1 font-display text-xl font-medium text-ink">{step.title}</h3>
                     <p className="text-sm leading-relaxed text-ink/70">{step.description}</p>
                   </div>
@@ -194,7 +194,7 @@ const MethodologySection = () => (
               ))}
             </ol>
 
-            <div className="flex w-full justify-center pt-2 pb-6">
+            <div className="flex w-full justify-center pt-2 pb-2 md:pb-6">
               <Link
                 to="/about-us"
                 data-testid="methodology-learn-more"
@@ -206,7 +206,7 @@ const MethodologySection = () => (
           </div>
         </div>
 
-        <div className="flex items-center justify-center lg:justify-end">
+        <div className="hidden items-center justify-center md:flex lg:justify-end">
           <img
             src={methodologyArt}
             alt="A pebble observation card with a verified map location"

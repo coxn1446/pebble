@@ -33,6 +33,11 @@ export const updateMe = async (payload) => {
   return data.user;
 };
 
+export const fetchMyProfile = async () => {
+  const res = await fetch('/api/users/me/profile', { credentials: 'include' });
+  return parseJson(res);
+};
+
 export const fetchUserProfile = async (username) => {
   const res = await fetch(`/api/users/${encodeURIComponent(username)}`, {
     credentials: 'include',

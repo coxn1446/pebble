@@ -44,11 +44,15 @@ module.exports = async ({ app }) => {
         {
           clientID: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          callbackURL: '/api/auth/google/callback',
+          callbackURL: authService.oauthCallbackUrl('google'),
+          passReqToCallback: true,
         },
-        async (accessToken, refreshToken, profile, done) => {
+        async (req, accessToken, refreshToken, profile, done) => {
           try {
-            const user = await authService.findOrCreateOAuthUser('google', profile);
+            const state = authService.readOAuthState(req.query?.state || req.body?.state);
+            const user = await authService.findOrCreateOAuthUser('google', profile, {
+              linkUserId: state?.purpose === 'link' && state.provider === 'google' ? state.userId : null,
+            });
             return done(null, user);
           } catch (err) {
             return done(err);
@@ -73,12 +77,16 @@ module.exports = async ({ app }) => {
           teamID: process.env.APPLE_TEAM_ID,
           keyID: process.env.APPLE_KEY_ID,
           privateKeyString: process.env.APPLE_KEY.replace(/\\n/g, '\n'),
-          callbackURL: '/api/auth/apple/callback',
+          callbackURL: authService.oauthCallbackUrl('apple'),
           passReqToCallback: true,
         },
         async (req, accessToken, refreshToken, idToken, profile, done) => {
           try {
-            const user = await authService.findOrCreateOAuthUser('apple', profile || { id: idToken });
+            const mapped = authService.profileFromAppleCallback({ idToken, profile, req });
+            const state = authService.readOAuthState(req.query?.state || req.body?.state);
+            const user = await authService.findOrCreateOAuthUser('apple', mapped, {
+              linkUserId: state?.purpose === 'link' && state.provider === 'apple' ? state.userId : null,
+            });
             return done(null, user);
           } catch (err) {
             return done(err);

@@ -12,7 +12,10 @@ import {
   WelcomeHeader,
   WelcomeFooter,
   WelcomeScroller,
+  WelcomeHCarousel,
+  WelcomeHSlide,
   SectionHeader,
+  useMobileWelcome,
 } from './WelcomeShared';
 
 const ABOUT_JOURNEY = [
@@ -80,34 +83,65 @@ const DIFFERENT_POINTS = [
   'Pebble responds to your feedback to make the tool more useful!',
 ];
 
-const AboutJourneyItem = ({ date, src, alt, isFirst, isLast }) => (
-  <li className="relative flex min-w-0 flex-1 flex-col items-center gap-1 lg:min-h-0 lg:flex-row lg:items-center lg:gap-3">
-    <time className="shrink-0 text-center text-xs font-medium uppercase tracking-wide text-ink/60 lg:w-20 lg:text-right">
-      {date}
-    </time>
-    <span
-      className="relative hidden w-4 shrink-0 items-center justify-center self-stretch lg:flex"
-      aria-hidden="true"
-    >
-      {isFirst ? null : <span className="welcome-timeline-line welcome-timeline-line-up" />}
-      {isLast ? null : <span className="welcome-timeline-line welcome-timeline-line-down" />}
-      <span className="welcome-timeline-pebble relative z-10" />
-    </span>
-    <figure className="flex h-16 w-16 shrink-0 items-center justify-center lg:h-full lg:min-h-0 lg:w-44 lg:py-2">
-      <img src={src} alt={alt} className="max-h-full w-auto max-w-full object-contain" />
-    </figure>
-  </li>
-);
+const AboutJourneyItem = ({ date, src, alt, isFirst, isLast, stacked = false }) => {
+  if (stacked) {
+    return (
+      <li className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-hidden">
+        <time className="shrink-0 px-2 text-center text-xs font-medium uppercase tracking-wide text-ink/60">
+          {date}
+        </time>
+        <span className="flex w-full shrink-0 items-center" aria-hidden="true">
+          <span className={`h-px flex-1 ${isFirst ? '' : 'bg-border'}`} />
+          <span className="welcome-timeline-pebble mx-1 shrink-0" />
+          <span className={`h-px flex-1 ${isLast ? '' : 'bg-border'}`} />
+        </span>
+        <figure className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden px-2">
+          <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
+        </figure>
+      </li>
+    );
+  }
 
-const FieldJourney = ({ stops, continueFrom = false, continueTo = false, className = '' }) => (
+  return (
+    <li className="relative flex min-w-0 flex-1 flex-col items-center gap-1 lg:min-h-0 lg:flex-row lg:items-center lg:gap-3">
+      <time className="shrink-0 text-center text-xs font-medium uppercase tracking-wide text-ink/60 lg:w-20 lg:text-right">
+        {date}
+      </time>
+      <span
+        className="relative hidden w-4 shrink-0 items-center justify-center self-stretch lg:flex"
+        aria-hidden="true"
+      >
+        {isFirst ? null : <span className="welcome-timeline-line welcome-timeline-line-up" />}
+        {isLast ? null : <span className="welcome-timeline-line welcome-timeline-line-down" />}
+        <span className="welcome-timeline-pebble relative z-10" />
+      </span>
+      <figure className="flex h-16 w-16 shrink-0 items-center justify-center lg:h-full lg:min-h-0 lg:w-44 lg:py-2">
+        <img src={src} alt={alt} className="max-h-full w-auto max-w-full object-contain" />
+      </figure>
+    </li>
+  );
+};
+
+const FieldJourney = ({
+  stops,
+  continueFrom = false,
+  continueTo = false,
+  className = '',
+  stacked = false,
+}) => (
   <ol
-    className={`flex w-full flex-row items-end gap-2 overflow-x-auto px-4 lg:min-h-0 lg:flex-1 lg:flex-col lg:items-stretch lg:gap-0 lg:overflow-visible lg:px-0 ${className}`}
+    className={
+      stacked
+        ? `flex min-h-0 w-full flex-1 flex-row items-stretch ${className}`
+        : `flex w-full flex-row items-end gap-2 overflow-x-auto px-4 lg:min-h-0 lg:flex-1 lg:flex-col lg:items-stretch lg:gap-0 lg:overflow-visible lg:px-0 ${className}`
+    }
     aria-label="Field journey"
   >
     {stops.map((stop, index) => (
       <AboutJourneyItem
         key={stop.place}
         {...stop}
+        stacked={stacked}
         isFirst={index === 0 && !continueFrom}
         isLast={index === stops.length - 1 && !continueTo}
       />
@@ -115,55 +149,110 @@ const FieldJourney = ({ stops, continueFrom = false, continueTo = false, classNa
   </ol>
 );
 
-const AboutLetter = () => (
-  <div className="min-h-0 w-full max-w-xl">
-    <SectionHeader label="Inspiration" title="About Us" align="left" compact />
-    <div className="space-y-3 text-justify text-sm leading-snug text-ink/70">
-      <p className="font-semibold text-ink">
-        Nature inspires the best things in life, and Pebble is no different.
-      </p>
-      <p>
-        During an expedition to Antarctica as a Grosvenor Teacher Fellow with National Geographic
-        and Lindblad Expeditions, I observed a large breeding colony of Gentoo penguins. It was
-        comical chaos... thievery, feuds, and frantic pebble-gifting. But beneath the chaos was
-        something remarkable: penguins collecting individual pebbles and working together to build
-        nests that protect the next generation.
-      </p>
-      <p>
-        I started wondering...{' '}
-        <strong className="font-semibold text-ink">what if we could do something similar?</strong>
-      </p>
-      <p>
-        What if educators, researchers, and explorers could collect their real-world observations-
-        metaphorical “pebbles”- and bring them together to create a shared resource for learning?
-      </p>
-      <p>
-        A few years ago, I realized how difficult it was to find compelling, relevant, real-world
-        stories for my science classroom that were connected to content standards and ready to use
-        with students. There is an incredible community of people observing, documenting, and
-        protecting our changing world, but their experiences and discoveries are often scattered and
-        not readily accessible to educators.
-      </p>
-      <p className="font-semibold text-ink">So, I decided to build the nest.</p>
-      <p>
-        Pebble brings these stories together in one searchable, shared space, helping educators
-        discover real-world phenomena and turn them into meaningful learning experiences.
-      </p>
-      <p>
-        Our pebble-collecting, nest-building enterprise will be considerably less dramatic than the
-        penguins’, but no less valuable.
-      </p>
-      <p>Now, I invite you to add your pebble.</p>
-    </div>
+const LETTER_PARAGRAPHS = {
+  nature: (
+    <p key="nature" className="font-semibold text-ink">
+      Nature inspires the best things in life, and Pebble is no different.
+    </p>
+  ),
+  expedition: (
+    <p key="expedition">
+      During an expedition to Antarctica as a Grosvenor Teacher Fellow with National Geographic
+      and Lindblad Expeditions, I observed a large breeding colony of Gentoo penguins. It was
+      comical chaos... thievery, feuds, and frantic pebble-gifting. But beneath the chaos was
+      something remarkable: penguins collecting individual pebbles and working together to build
+      nests that protect the next generation.
+    </p>
+  ),
+  wondering: (
+    <p key="wondering">
+      I started wondering...{' '}
+      <strong className="font-semibold text-ink">what if we could do something similar?</strong>
+    </p>
+  ),
+  educators: (
+    <p key="educators">
+      What if educators, researchers, and explorers could collect their real-world observations-
+      metaphorical “pebbles”- and bring them together to create a shared resource for learning?
+    </p>
+  ),
+  classroom: (
+    <p key="classroom">
+      A few years ago, I realized how difficult it was to find compelling, relevant, real-world
+      stories for my science classroom that were connected to content standards and ready to use
+      with students. There is an incredible community of people observing, documenting, and
+      protecting our changing world, but their experiences and discoveries are often scattered and
+      not readily accessible to educators.
+    </p>
+  ),
+  nest: (
+    <p key="nest" className="font-semibold text-ink">
+      So, I decided to build the nest.
+    </p>
+  ),
+  brings: (
+    <p key="brings">
+      Pebble brings these stories together in one searchable, shared space, helping educators
+      discover real-world phenomena and turn them into meaningful learning experiences.
+    </p>
+  ),
+  enterprise: (
+    <p key="enterprise">
+      Our pebble-collecting, nest-building enterprise will be considerably less dramatic than the
+      penguins’, but no less valuable.
+    </p>
+  ),
+  invite: <p key="invite">Now, I invite you to add your pebble.</p>,
+};
+
+const LETTER_KEYS = Object.keys(LETTER_PARAGRAPHS);
+
+const MOBILE_JOURNEY_SLIDES = Array.from(
+  { length: Math.ceil(ABOUT_JOURNEY.length / 2) },
+  (_, index) => ABOUT_JOURNEY.slice(index * 2, index * 2 + 2)
+);
+
+const MOBILE_LETTER_SLIDES = [
+  ['nature', 'expedition'],
+  ['wondering', 'educators'],
+  ['classroom'],
+  ['nest', 'brings', 'enterprise', 'invite'],
+];
+
+const LetterCopy = ({
+  keys = LETTER_KEYS,
+  className = 'space-y-3 text-justify text-sm leading-snug text-ink/70',
+}) => (
+  <div className={className}>
+    {keys.map((key) => LETTER_PARAGRAPHS[key])}
   </div>
 );
 
-const HowWeAreDifferentCard = () => (
-  <div className="my-auto w-full rounded-3xl bg-background px-6 py-10 md:px-12 md:py-14">
-    <h2 className="mb-10 font-display text-3xl font-medium text-ink md:text-4xl">
+const AboutLetter = () => (
+  <div className="min-h-0 w-full max-w-xl">
+    <SectionHeader label="Inspiration" title="About Us" align="left" compact />
+    <LetterCopy />
+  </div>
+);
+
+const HowWeAreDifferentCard = ({ dense = false }) => (
+  <div
+    className={
+      dense
+        ? 'my-auto w-full rounded-3xl bg-background px-4 py-5'
+        : 'my-auto w-full rounded-3xl bg-background px-6 py-10 md:px-12 md:py-14'
+    }
+  >
+    <h2
+      className={
+        dense
+          ? 'mb-4 font-display text-2xl font-medium text-ink'
+          : 'mb-10 font-display text-3xl font-medium text-ink md:text-4xl'
+      }
+    >
       How we&apos;re <em className="welcome-different-mark">different</em>
     </h2>
-    <ul className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2">
+    <ul className={dense ? 'grid grid-cols-2 gap-x-4 gap-y-3' : 'grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2'}>
       {DIFFERENT_POINTS.map((point) => (
         <li key={point} className="flex items-start gap-3">
           <span className="welcome-check-pebble mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center text-ink">
@@ -173,7 +262,13 @@ const HowWeAreDifferentCard = () => (
         </li>
       ))}
     </ul>
-    <p className="mt-12 text-center font-display text-lg text-ink md:text-xl">
+    <p
+      className={
+        dense
+          ? 'mt-4 text-center font-display text-base text-ink'
+          : 'mt-12 text-center font-display text-lg text-ink md:text-xl'
+      }
+    >
       Made for educators <em>by an educator</em>
     </p>
   </div>
@@ -213,11 +308,60 @@ const HowWeAreDifferentSection = () => (
   </section>
 );
 
-const AboutUsPage = () => (
+const AboutUsMobile = () => (
+  <WelcomeScroller testId="about-us-scroll">
+    <section
+      id="about-us"
+      className="relative flex h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface"
+    >
+      <WelcomeHeader />
+      <WelcomeHCarousel
+        testId="about-carousel"
+        label="About us letter and field journey"
+        className="min-h-0 flex-1"
+      >
+        {MOBILE_JOURNEY_SLIDES.map((stops, index) => (
+          <WelcomeHSlide key={stops[0].place} className="pt-32 pb-2">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <FieldJourney
+                stops={stops}
+                continueFrom={index > 0}
+                continueTo={index < MOBILE_JOURNEY_SLIDES.length - 1}
+                stacked
+              />
+              <div className="flex min-h-0 flex-1 flex-col justify-start overflow-hidden px-4 pt-4">
+                <LetterCopy
+                  keys={MOBILE_LETTER_SLIDES[index]}
+                  className="space-y-2 text-justify text-sm leading-snug text-ink/70"
+                />
+              </div>
+            </div>
+          </WelcomeHSlide>
+        ))}
+      </WelcomeHCarousel>
+    </section>
+    <section
+      id="how-we-are-different"
+      className="flex h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface"
+    >
+      <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-4 py-6">
+        <HowWeAreDifferentCard dense />
+      </div>
+      <WelcomeFooter />
+    </section>
+  </WelcomeScroller>
+);
+
+const AboutUsDesktop = () => (
   <WelcomeScroller testId="about-us-scroll">
     <AboutUsSection />
     <HowWeAreDifferentSection />
   </WelcomeScroller>
 );
+
+const AboutUsPage = () => {
+  const isMobile = useMobileWelcome();
+  return isMobile ? <AboutUsMobile /> : <AboutUsDesktop />;
+};
 
 export default AboutUsPage;

@@ -11,6 +11,7 @@ Any change that affects persistence must update `documentation/DATABASE_SCHEMA.m
 - Parameterized SQL only (`pg` placeholders). No string-concatenated queries.
 - Prefer `TIMESTAMPTZ`, explicit FKs, and indexes that match real `WHERE` / `JOIN` paths.
 - No ORM. No speculative tables or columns.
+- User identity is `password`, `google_id`, and `apple_id` on `users`. A password hash means local login. A provider id means that provider is linked. One account can have any combination. Do not add `auth_provider` / `provider_id`.
 - Document purpose, columns, indexes, FKs, triggers, and Last Modified on each changed table.
 
 Use the `persistence-change` skill for the full workflow.

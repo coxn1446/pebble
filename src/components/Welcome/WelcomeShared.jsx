@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Children, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import BrandMark from '../Brand/BrandMark';
 import { CloseIcon, MenuIcon } from '../Icons/Icons';
@@ -7,8 +7,27 @@ import signInIcon from '../../resources/icon-sign-in.png';
 
 export const WELCOME_TAGLINE = 'Collect • Connect • Create';
 
+/** Phones only. Tablet (`md`, 768px) and up keep the wider marketing layout. */
+export const MOBILE_WELCOME_QUERY = '(max-width: 767px)';
+
+export const useMobileWelcome = () => {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(MOBILE_WELCOME_QUERY).matches
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_WELCOME_QUERY);
+    const onChange = () => setIsMobile(media.matches);
+    onChange();
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+
+  return isMobile;
+};
+
 export const sectionClassName =
-  'flex h-dvh min-h-dvh w-full snap-start snap-always flex-col bg-surface';
+  'flex h-dvh min-h-dvh w-full snap-start snap-always flex-col overflow-hidden bg-surface';
 
 export const sectionPadClassName =
   'flex min-h-0 flex-1 flex-col px-4 pt-24 pb-8 md:px-8 md:pt-28 md:pb-10';
@@ -149,8 +168,10 @@ export const WelcomeHeader = () => {
 export const WelcomeFooter = () => (
   <footer className="w-full shrink-0 bg-ocean/10">
     <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-2 px-4 py-2 md:flex-row md:justify-between md:gap-4 md:px-8 md:py-2">
-      <BrandMark size="sm" to="/" outline />
-      <nav className="flex flex-wrap items-center gap-6 md:gap-10" aria-label="Footer">
+      <div className="hidden md:block">
+        <BrandMark size="sm" to="/" outline />
+      </div>
+      <nav className="hidden flex-wrap items-center gap-6 md:flex md:gap-10" aria-label="Footer">
         {FOOTER_LINKS.map(({ label, href }) => (
           <a
             key={label}
@@ -161,7 +182,9 @@ export const WelcomeFooter = () => (
           </a>
         ))}
       </nav>
-      <p className="text-sm text-ink md:text-right">Copyright 2026 Pebble. All Rights Reserved.</p>
+      <p className="text-center text-sm text-ink md:text-right">
+        Copyright 2026 Pebble. All Rights Reserved.
+      </p>
     </div>
   </footer>
 );
@@ -169,7 +192,67 @@ export const WelcomeFooter = () => (
 export const WelcomeScroller = ({ testId, children }) => (
   <div
     data-testid={testId}
-    className="h-full min-h-0 overflow-y-auto scroll-smooth snap-y snap-mandatory bg-surface"
+    className="h-full min-h-0 overflow-x-hidden overflow-y-auto scroll-smooth snap-y snap-mandatory bg-surface"
+  >
+    {children}
+  </div>
+);
+
+export const WelcomeHCarousel = ({ testId, label, className = '', children }) => {
+  const scrollerRef = useRef(null);
+  const slides = Children.toArray(children);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return undefined;
+    const onScroll = () => {
+      const width = scroller.clientWidth;
+      if (!width) return;
+      const next = Math.round(scroller.scrollLeft / width);
+      setIndex(Math.max(0, Math.min(slides.length - 1, next)));
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    return () => scroller.removeEventListener('scroll', onScroll);
+  }, [slides.length]);
+
+  return (
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+      <div
+        ref={scrollerRef}
+        data-testid={testId}
+        role="region"
+        aria-label={label}
+        className={`welcome-h-carousel flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden ${className}`}
+      >
+        {slides}
+      </div>
+      {slides.length > 1 ? (
+        <ol
+          data-testid={`${testId}-dots`}
+          aria-label={`${label} progress`}
+          className="flex shrink-0 items-center justify-center gap-1.5 py-2 md:hidden"
+        >
+          {slides.map((slide, dotIndex) => (
+            <li key={slide.key ?? dotIndex}>
+              <span
+                aria-current={dotIndex === index ? 'true' : undefined}
+                aria-label={`Slide ${dotIndex + 1} of ${slides.length}`}
+                className={`block rounded-full ${
+                  dotIndex === index ? 'h-2 w-2 bg-ink' : 'h-1.5 w-1.5 bg-pebble'
+                }`}
+              />
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
+  );
+};
+
+export const WelcomeHSlide = ({ className = '', children }) => (
+  <div
+    className={`flex h-full w-full shrink-0 snap-start snap-always flex-col overflow-hidden ${className}`}
   >
     {children}
   </div>

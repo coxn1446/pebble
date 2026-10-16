@@ -1,13 +1,11 @@
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import Profile from '../routes/Profile';
 import authReducer from '../store/auth.reducer';
 import { fetchUserProfile } from '../helpers/userHelpers';
-import { deletePebble } from '../helpers/pebbleHelpers';
 
 jest.mock('../helpers/userHelpers', () => ({
   fetchUserProfile: jest.fn(),
@@ -16,11 +14,6 @@ jest.mock('../helpers/userHelpers', () => ({
 jest.mock('../helpers/collectionHelpers', () => ({
   fetchCollections: jest.fn(async () => []),
   addPebbleToCollection: jest.fn(),
-}));
-
-jest.mock('../helpers/pebbleHelpers', () => ({
-  ...jest.requireActual('../helpers/pebbleHelpers'),
-  deletePebble: jest.fn(),
 }));
 
 jest.mock('../helpers/socialHelpers', () => ({
@@ -76,8 +69,7 @@ describe('Profile drafts', () => {
     expect(within(gallery).queryByText('Unfinished shelf')).not.toBeInTheDocument();
   });
 
-  test('the owner confirms before a draft or a published pebble is deleted', async () => {
-    const user = userEvent.setup();
+  test('drafts and published pebbles are opened, not deleted from the profile', async () => {
     fetchUserProfile.mockResolvedValue({
       user: { ...me, display_name: 'Ada', follower_count: 0, following_count: 0 },
       pebbles: [
@@ -92,21 +84,15 @@ describe('Profile drafts', () => {
         },
       ],
     });
-    deletePebble.mockResolvedValue({ success: true });
 
     renderProfile();
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Unfinished shelf' }));
-    expect(screen.getByTestId('delete-pebble-modal')).toHaveTextContent(
-      'Are you sure? Deletion is permanent.'
+    expect(await screen.findByRole('link', { name: 'Unfinished shelf' })).toHaveAttribute(
+      'href',
+      '/pebbles/1/edit'
     );
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(deletePebble).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole('button', { name: 'Delete Published shelf' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-    await waitFor(() => expect(deletePebble).toHaveBeenCalledWith(2));
-    await waitFor(() => expect(screen.queryByText('Published shelf')).not.toBeInTheDocument());
-    expect(screen.getByRole('link', { name: 'Unfinished shelf' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Delete/ })).not.toBeInTheDocument();
+    const gallery = screen.getByTestId('profile-gallery');
+    expect(within(gallery).getByText('Published shelf')).toBeInTheDocument();
   });
 });

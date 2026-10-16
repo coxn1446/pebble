@@ -156,7 +156,7 @@ The server uses a loader pattern to initialize middleware and services:
 #### Authentication Flow
 - Passport.js with session-based authentication
 - Serialization/deserialization of user objects
-- Support for Local, Google OAuth, and Apple Sign In
+- Local login, Google, and Apple can all belong to the same user via `password`, `google_id`, and `apple_id`
 - Session stored in PostgreSQL using connect-pg-simple
 
 #### Real-time Communication (optional)
@@ -221,7 +221,9 @@ Example structure for DATABASE_SCHEMA.md:
   - user_id (SERIAL PRIMARY KEY)
   - username (VARCHAR UNIQUE NOT NULL)
   - email (VARCHAR UNIQUE)
-  - password (VARCHAR) - bcrypt hashed
+  - password (VARCHAR) - bcrypt hash; null when local login is off
+  - google_id (VARCHAR) - Google subject; null until linked
+  - apple_id (VARCHAR) - Apple subject; null until linked
   - ...
 - **Indexes**: username_idx, email_idx
 - **Foreign Keys**: None

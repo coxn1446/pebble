@@ -4,7 +4,7 @@ import { createFlag } from '../../helpers/moderationHelpers';
 import Modal from '../Modal/Modal';
 
 const inputClass =
-  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-accent';
+  'w-full rounded-2xl border border-border bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-accent';
 
 const FlagDialog = ({ targetType, targetId, onClose }) => {
   const [reason, setReason] = useState('Offensive content');

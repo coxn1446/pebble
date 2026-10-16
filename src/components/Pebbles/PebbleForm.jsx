@@ -1,12 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import FormModal, { formActionClass, formPrimaryClass } from '../Modal/FormModal';
+import Modal from '../Modal/Modal';
 import toast from 'react-hot-toast';
 import FieldNotesEditor from '../FieldNotes/FieldNotesEditor';
 import LocationField from '../Places/LocationField';
 import { fetchFields, fetchPhenomena } from '../../helpers/taxonomyHelpers';
-import { EMPTY_FIELD_NOTES } from '../../helpers/fieldNotesHelpers';
+import { EMPTY_FIELD_NOTES, countFieldNoteWords } from '../../helpers/fieldNotesHelpers';
 import { readObservation } from '../../helpers/pebbleHelpers';
-import { uploadFile } from '../../helpers/uploadHelpers';
+import { uploadFiles } from '../../helpers/uploadHelpers';
+import {
+  MAX_UPLOAD_BYTES,
+  VISUAL_MEDIA_LIMIT,
+  isVisualMedia,
+  mediaKindForFile,
+} from '../../helpers/mediaPreview';
+import MediaCarousel from './MediaCarousel';
 import MediaFrame from './MediaFrame';
 import { fetchWeatherSuggestion } from '../../helpers/weatherHelpers';
 import {
@@ -22,6 +31,8 @@ import {
   SunIcon,
   ThunderIcon,
   WindIcon,
+  CloseIcon,
+  PlusIcon,
   fieldIconForName,
 } from '../Icons/Icons';
 
@@ -53,12 +64,22 @@ const initialWeather = (value) => {
 };
 
 const MEDIA_KINDS = [
-  { type: 'image', label: 'Photo', accept: 'image/*' },
-  { type: 'video', label: 'Video', accept: 'video/*' },
   { type: 'audio', label: 'Audio', accept: 'audio/*' },
   { type: 'data', label: 'Data', accept: '.json,.csv,.tsv,.txt' },
   { type: 'attachment', label: 'Attachment', accept: '*/*' },
 ];
+
+const LIBRARY_ACCEPT = 'image/*,video/*,.mov,.mp4,.m4v,.webm,.heic,.jpg,.jpeg,.png';
+
+const formatSavedStamp = (date) => {
+  const hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `Saved ${hour12}:${minutes} ${suffix}`;
+};
+
+const filledCount = (rows) => rows.map((value) => String(value || '').trim()).filter(Boolean).length;
 
 const PebbleForm = ({
   initial,
@@ -68,7 +89,9 @@ const PebbleForm = ({
   pageTitle = 'Create pebble',
   submitLabel = 'Publish',
   onDelete,
+  onDiscardDraft,
 }) => {
+  const navigate = useNavigate();
   const [pebbleId, setPebbleId] = useState(initial?.pebble_id || null);
   const [title, setTitle] = useState(initial?.title || '');
   const [description, setDescription] = useState(initial?.description || '');
@@ -80,9 +103,12 @@ const PebbleForm = ({
   const [pinName, setPinName] = useState(initial?.pin_name || initial?.place_name || '');
   const [isPrivate, setIsPrivate] = useState(Boolean(initial?.is_private));
   const [heroImageUrl, setHeroImageUrl] = useState(initial?.hero_image_url || null);
-  const [uploadingHero, setUploadingHero] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [media, setMedia] = useState(initial?.media || []);
+  const [mediaIndex, setMediaIndex] = useState(0);
+  const [adjusting, setAdjusting] = useState(false);
+  const [carouselOpen, setCarouselOpen] = useState(false);
+  const [activeDrawer, setActiveDrawer] = useState(null);
+  const [savedAt, setSavedAt] = useState(null);
   const [place, setPlace] = useState({
     placeId: initial?.place_id || null,
     placeName: initial?.place_name || '',
@@ -108,7 +134,8 @@ const PebbleForm = ({
     (initial?.questions || []).map((item) => item.prompt).concat([''])
   );
   const [saveState, setSaveState] = useState('idle');
-  const heroInputRef = useRef(null);
+  const libraryInputRef = useRef(null);
+  const pendingKey = useRef(0);
   const skipAutosave = useRef(true);
   const aliveRef = useRef(true);
   const weatherChosen = useRef(Boolean(initialWeather(initial?.weather)));
@@ -119,10 +146,13 @@ const PebbleForm = ({
   );
   const saveChain = useRef(Promise.resolve());
   const publishingRef = useRef(false);
+  const discardRef = useRef(false);
   const pebbleIdRef = useRef(pebbleId);
   const saveDraftRef = useRef(onSaveDraft);
   saveDraftRef.current = onSaveDraft;
   const status = initial?.status === 'published' ? 'published' : 'draft';
+  const isPublished = status === 'published' && Boolean(initial);
+  const isDraft = initial?.status === 'draft';
 
   useEffect(() => {
     if (pebbleId) pebbleIdRef.current = pebbleId;
@@ -173,7 +203,17 @@ const PebbleForm = ({
     otherTags,
     resources: resources.map((url) => url.trim()).filter(Boolean),
     questions: questions.map((prompt) => prompt.trim()).filter(Boolean),
-    mediaIds: media.map((item) => item.media_id),
+    mediaIds: media.filter((item) => !item.pending).map((item) => item.media_id),
+    media: media
+      .filter((item) => !item.pending)
+      .map((item) => ({
+        mediaId: item.media_id,
+        title: item.title || null,
+        caption: item.caption || null,
+        previewX: item.preview_x ?? 50,
+        previewY: item.preview_y ?? 50,
+        previewScale: item.preview_scale ?? 1,
+      })),
     status,
   });
 
@@ -212,7 +252,10 @@ const PebbleForm = ({
           pebbleIdRef.current = saved.pebble_id;
           if (aliveRef.current) setPebbleId(saved.pebble_id);
         }
-        if (aliveRef.current) setSaveState('saved');
+        if (aliveRef.current) {
+          setSaveState('saved');
+          setSavedAt(new Date());
+        }
         return saved;
       } catch (err) {
         if (aliveRef.current) setSaveState('error');
@@ -224,6 +267,7 @@ const PebbleForm = ({
   };
 
   useEffect(() => {
+    if (isPublished) return undefined;
     if (skipAutosave.current) {
       skipAutosave.current = false;
       return undefined;
@@ -255,6 +299,7 @@ const PebbleForm = ({
   useEffect(() => {
     aliveRef.current = true;
     const flush = () => {
+      if (discardRef.current || isPublished) return;
       persistDraft().catch(() => {});
     };
     window.addEventListener('beforeunload', flush);
@@ -295,6 +340,18 @@ const PebbleForm = ({
       toast.error('Title is required');
       return;
     }
+    if (!selectedPhenomena.length) {
+      toast.error('Choose a phenomenon topic');
+      return;
+    }
+    if (place.placeLat == null || place.placeLng == null) {
+      toast.error('Add a location');
+      return;
+    }
+    if (!String(place.placeName || '').trim() && !pinName.trim()) {
+      toast.error('Name the pin');
+      return;
+    }
     publishingRef.current = true;
     try {
       await saveChain.current.catch(() => {});
@@ -310,15 +367,102 @@ const PebbleForm = ({
   };
 
   const handlePlaceChange = (next) => {
-    setPlace(next);
-    if (!pinTouched.current && next?.placeName) setPinName(next.placeName);
+    const manualPin = Boolean(next?.manualPin);
+    const placeNext = { ...(next || {}) };
+    delete placeNext.manualPin;
+    setPlace(placeNext);
+    if (manualPin) {
+      if (!pinTouched.current) setPinName('');
+      return;
+    }
+    if (!pinTouched.current && placeNext.placeName) setPinName(placeNext.placeName);
   };
 
   const saveProgress = () => {
     persistDraft()
-      .then(() => toast.success('Progress saved'))
+      .then(() => toast.success('Changes saved'))
       .catch((err) => toast.error(err.message || 'Could not save'));
   };
+
+  const discardChanges = async () => {
+    discardRef.current = true;
+    publishingRef.current = true;
+    try {
+      if (!initial && pebbleIdRef.current && onDiscardDraft) {
+        await onDiscardDraft(pebbleIdRef.current);
+      }
+    } catch (err) {
+      discardRef.current = false;
+      publishingRef.current = false;
+      toast.error(err.message || 'Could not discard');
+      return;
+    }
+    navigate(isPublished ? `/pebbles/${initial.pebble_id}` : '/profile');
+  };
+
+  const goBack = () => {
+    if (isPublished) {
+      discardRef.current = true;
+      publishingRef.current = true;
+      navigate(`/pebbles/${initial.pebble_id}`);
+      return;
+    }
+    navigate('/profile');
+  };
+
+  const handleChromeBack = () => {
+    if (carouselOpen) {
+      setCarouselOpen(false);
+      setAdjusting(false);
+      return;
+    }
+    if (activeDrawer) {
+      setActiveDrawer(null);
+      return;
+    }
+    goBack();
+  };
+
+  const renderActions = () => (
+    <>
+      {isDraft && onDelete ? (
+        <button type="button" onClick={onDelete} className={formActionClass} aria-label="Delete draft">
+          Delete
+        </button>
+      ) : (
+        <button type="button" onClick={discardChanges} className={formActionClass}>
+          Discard
+        </button>
+      )}
+      {isPublished ? (
+        <button
+          type="submit"
+          disabled={isSubmitting || media.some((item) => item.pending)}
+          className={formPrimaryClass}
+        >
+          {isSubmitting ? 'Saving…' : 'Save changes'}
+        </button>
+      ) : (
+        <>
+          <button
+            type="button"
+            disabled={isSubmitting || media.some((item) => item.pending)}
+            onClick={saveProgress}
+            className={formActionClass}
+          >
+            Save changes
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting || media.some((item) => item.pending)}
+            className={formPrimaryClass}
+          >
+            {isSubmitting ? 'Saving…' : submitLabel}
+          </button>
+        </>
+      )}
+    </>
+  );
 
   const toggleField = (id) => {
     setFieldIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -343,6 +487,9 @@ const PebbleForm = ({
   const visiblePhenomena = [...catalogPhenomena, ...keptPhenomena];
   const chosenWeather = WEATHER.find((item) => item.id === weather);
   const ChosenWeatherIcon = chosenWeather?.Icon;
+  const readyMedia = media.filter((item) => !item.pending);
+  const safeMediaIndex = readyMedia.length ? Math.min(mediaIndex, readyMedia.length - 1) : 0;
+  const activeMedia = readyMedia[safeMediaIndex] || null;
 
   const addOtherTag = () => {
     const name = otherDraft.trim();
@@ -351,125 +498,178 @@ const PebbleForm = ({
     setOtherDraft('');
   };
 
-  const uploadHero = async (file) => {
-    if (!file) return;
-    setUploadingHero(true);
-    try {
-      const uploaded = await uploadFile(file, 'image');
-      setHeroImageUrl(uploaded.media_url);
-      toast.success('Featured image uploaded');
-    } catch (err) {
-      toast.error(err.message || 'Upload failed');
-    } finally {
-      setUploadingHero(false);
-      if (heroInputRef.current) heroInputRef.current.value = '';
-    }
+  const reportUploadError = (result, fallbackName) => {
+    const message = result?.error?.message || 'Upload failed';
+    const name = result?.file?.name || fallbackName;
+    toast.error(name && !message.includes(name) ? `${name}: ${message}` : message);
   };
 
-  const uploadMedia = async (kind, fileList) => {
+  const queueUploads = (entries) => {
+    if (!entries.length) return;
+    const placeholders = entries.map((entry) => {
+      pendingKey.current += 1;
+      return {
+        media_id: `pending-${pendingKey.current}`,
+        pending: true,
+        filename: entry.file.name,
+        media_type: entry.mediaType,
+        media_url: '',
+        title: '',
+        caption: '',
+        preview_x: 50,
+        preview_y: 50,
+        preview_scale: 1,
+      };
+    });
+    setMedia((prev) => [...prev, ...placeholders]);
+    uploadFiles(entries).then((results) => {
+      results.forEach((result, index) => {
+        if (!result?.ok) reportUploadError(result, placeholders[index].filename);
+      });
+      setMedia((prev) => {
+        let next = prev;
+        results.forEach((result, index) => {
+          const placeholder = placeholders[index];
+          if (!next.some((item) => item.media_id === placeholder.media_id)) return;
+          if (!result?.ok) {
+            next = next.filter((item) => item.media_id !== placeholder.media_id);
+            return;
+          }
+          next = next.map((item) =>
+            item.media_id === placeholder.media_id
+              ? {
+                  media_id: result.media.media_id,
+                  media_url: result.media.media_url,
+                  media_type: result.media.media_type || placeholder.media_type,
+                  filename: result.media.filename || placeholder.filename,
+                  title: '',
+                  caption: '',
+                  preview_x: 50,
+                  preview_y: 50,
+                  preview_scale: 1,
+                }
+              : item
+          );
+        });
+        return next;
+      });
+    });
+  };
+
+  const uploadLibrary = (fileList) => {
+    const picked = Array.from(fileList || []);
+    if (!picked.length) return;
+    const room = VISUAL_MEDIA_LIMIT - media.filter(isVisualMedia).length;
+    if (room <= 0) {
+      toast.error('You can add up to 10 photos and videos');
+      return;
+    }
+    const accepted = [];
+    for (const file of picked) {
+      const kind = mediaKindForFile(file);
+      if (!kind) {
+        toast.error(`${file.name} is not a photo or video`);
+        continue;
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        toast.error(`${file.name} is too large`);
+        continue;
+      }
+      accepted.push({ file, mediaType: kind });
+    }
+    const batch = accepted.slice(0, room);
+    if (accepted.length > room) toast.error('You can add up to 10 photos and videos');
+    queueUploads(batch);
+  };
+
+  const uploadMedia = (kind, fileList) => {
     const files = Array.from(fileList || []);
     if (!files.length) return;
-    setUploadingMedia(true);
-    try {
-      for (const file of files) {
-        try {
-          const uploaded = await uploadFile(file, kind.type);
-          setMedia((prev) => [
-            ...prev,
-            {
-              media_id: uploaded.media_id,
-              media_url: uploaded.media_url,
-              media_type: uploaded.media_type || kind.type,
-              filename: uploaded.filename || file.name,
-            },
-          ]);
-        } catch (err) {
-          const message = err.message || 'Upload failed';
-          toast.error(file.name && !message.includes(file.name) ? `${file.name}: ${message}` : message);
-        }
-      }
-    } finally {
-      setUploadingMedia(false);
-    }
+    queueUploads(files.map((file) => ({ file, mediaType: kind.type })));
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="w-full min-w-0 max-w-full space-y-4">
-      <div className="sticky top-0 z-20 -mx-6 border-b border-border bg-background/95 px-6 py-4 backdrop-blur-md">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/profile"
-              onClick={() => {
-                persistDraft().catch(() => {});
-              }}
-              className="text-sm text-muted hover:text-ink"
-            >
-              Back
-            </Link>
-            <h1 className="font-display text-2xl font-semibold text-ink">{pageTitle}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted">
-              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : ''}
-            </span>
-            {onDelete ? (
-              <button
-                type="button"
-                aria-label="Delete pebble"
-                onClick={onDelete}
-                className="rounded-2xl border border-border px-4 py-2.5 text-sm font-medium text-ink"
-              >
-                Delete
-              </button>
-            ) : null}
-            <button
-              type="button"
-              disabled={isSubmitting || uploadingHero}
-              onClick={saveProgress}
-              className="rounded-2xl border border-border px-4 py-2.5 text-sm font-medium text-ink"
-            >
-              Save progress
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || uploadingHero || uploadingMedia}
-              className="rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
-            >
-              {isSubmitting ? 'Saving…' : submitLabel}
-            </button>
-          </div>
-        </div>
-      </div>
+  const updateMediaItem = (mediaId, patch) => {
+    setMedia((prev) => prev.map((item) => (item.media_id === mediaId ? { ...item, ...patch } : item)));
+  };
 
-      <label className="block">
-        <span className="mb-1.5 block text-sm text-muted">Title</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
-      </label>
+  const removeMediaItem = (item) => {
+    setMedia((prev) => prev.filter((row) => row.media_id !== item.media_id));
+    if (item.media_url && item.media_url === heroImageUrl) setHeroImageUrl(null);
+    setCarouselOpen(false);
+    setAdjusting(false);
+    setMediaIndex(0);
+  };
 
-      <label className="block">
-        <span className="mb-1.5 block text-sm text-muted">At a glance</span>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          placeholder="One or two sentences"
-          className={inputClass}
-        />
-      </label>
+  const openMedia = (item) => {
+    const index = readyMedia.findIndex((row) => row.media_id === item.media_id);
+    setMediaIndex(index < 0 ? 0 : index);
+    setAdjusting(false);
+    setCarouselOpen(true);
+  };
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block">
+  const hasLocation = place.placeLat != null && place.placeLng != null;
+  const visualCount = media.filter(isVisualMedia).length;
+  const linkCount = filledCount(resources);
+  const questionCount = filledCount(questions);
+  const noteWords = countFieldNoteWords(fieldNotes);
+
+  const whenStatus = (() => {
+    if (!hasLocation) return 'Add a location';
+    const parts = [observedOn, observedTime, place.placeName || pinName].filter(Boolean);
+    return parts.join(' · ') || 'Location set';
+  })();
+  const mediaStatus = `${visualCount}/10 items selected`;
+  const topicStatus = selectedPhenomena.length
+    ? `${selectedPhenomena.length} ${selectedPhenomena.length === 1 ? 'phenomenon' : 'phenomena'} selected`
+    : 'You need to select a phenomenon';
+  const notesStatus = `${noteWords}/250 words`;
+  const otherStatus = (() => {
+    if (!linkCount && !questionCount) return 'Add links or questions';
+    const bits = [];
+    if (linkCount) bits.push(`${linkCount} ${linkCount === 1 ? 'link' : 'links'}`);
+    if (questionCount) bits.push(`${questionCount} ${questionCount === 1 ? 'question' : 'questions'}`);
+    return bits.join(', ');
+  })();
+
+  const drawers = [
+    { id: 'when', label: 'Date Time Location', status: whenStatus },
+    { id: 'media', label: 'Media', status: mediaStatus },
+    { id: 'topics', label: 'Scientific Fields & Phenomenon Tags', status: topicStatus },
+    { id: 'notes', label: 'Field Notes', status: notesStatus },
+    { id: 'other', label: 'Other', status: otherStatus },
+  ];
+
+  const trimmedTitle = title.trim();
+  const editing = pageTitle.startsWith('Edit');
+  const formTitle = trimmedTitle
+    ? `${editing ? 'Edit' : 'Create'} ${trimmedTitle}`
+    : `${editing ? 'Edit' : 'Create'} a pebble`;
+
+  const saveMeta = isPublished
+    ? null
+    : saveState === 'saving'
+      ? 'Saving…'
+      : savedAt
+        ? formatSavedStamp(savedAt)
+        : null;
+
+  const mediaName = (item) => item.filename || item.media_type || 'File';
+
+  const renderWhen = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">{whenStatus}</p>
+      <div className="grid min-w-0 grid-cols-2 gap-2">
+        <label className="block min-w-0">
           <span className="mb-1.5 block text-sm text-muted">Date</span>
           <input
             type="date"
             value={observedOn}
             onChange={(e) => editObservation(setObservedOn)(e.target.value)}
-            className={inputClass}
+            className={`${inputClass} min-w-0 max-w-full appearance-none`}
           />
         </label>
-        <div>
-          <label className="block">
+        <div className="min-w-0">
+          <label className="block min-w-0">
             <span className="mb-1.5 block text-sm text-muted">Time</span>
             <input
               type="time"
@@ -479,7 +679,7 @@ const PebbleForm = ({
               max="23:59"
               value={observedTime}
               onChange={(e) => editObservation(setObservedTime)(e.target.value)}
-              className={inputClass}
+              className={`${inputClass} min-w-0 max-w-full appearance-none`}
             />
           </label>
           <button
@@ -491,7 +691,6 @@ const PebbleForm = ({
           </button>
         </div>
       </div>
-
       <LocationField
         value={place}
         onChange={handlePlaceChange}
@@ -501,7 +700,6 @@ const PebbleForm = ({
           setPinName(value);
         }}
       />
-
       <div>
         <p className="text-sm text-ink">
           Weather: Choose a Location / Date / Time to select the weather{' '}
@@ -546,88 +744,92 @@ const PebbleForm = ({
           </div>
         ) : null}
       </div>
+    </div>
+  );
 
-      <div>
-        <span className="mb-1.5 block text-sm text-muted">Featured image</span>
-        {heroImageUrl ? (
-          <img
-            src={heroImageUrl}
-            alt=""
-            className="mb-2 max-h-56 w-full rounded-2xl border border-border object-cover"
-          />
-        ) : null}
-        <input
-          ref={heroInputRef}
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          onChange={(e) => uploadHero(e.target.files?.[0])}
-        />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={uploadingHero}
-            onClick={() => heroInputRef.current?.click()}
-            className="rounded-2xl bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+  const renderMedia = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">{mediaStatus}</p>
+      <div className="flex max-w-full flex-wrap gap-2">
+        {MEDIA_KINDS.map((kind) => (
+          <label
+            key={kind.type}
+            className="cursor-pointer rounded-xl border border-border px-2 py-1 text-xs text-ink"
           >
-            {heroImageUrl ? 'Replace image' : 'Choose image'}
-          </button>
-          {heroImageUrl ? (
-            <button
-              type="button"
-              className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
-              onClick={() => setHeroImageUrl(null)}
-            >
-              Remove
-            </button>
-          ) : null}
-        </div>
+            {kind.label}
+            <input
+              type="file"
+              accept={kind.accept}
+              multiple
+              aria-label={kind.label}
+              className="sr-only"
+              onChange={(e) => {
+                const picked = Array.from(e.target.files || []);
+                e.target.value = '';
+                uploadMedia(kind, picked);
+              }}
+            />
+          </label>
+        ))}
       </div>
-
-      <div className="min-w-0 max-w-full">
-        <span className="mb-1.5 block text-sm text-muted">Media</span>
-        <div className="mb-2 flex max-w-full flex-wrap gap-2">
-          {MEDIA_KINDS.map((kind) => (
-            <label
-              key={kind.type}
-              className="cursor-pointer rounded-xl border border-border px-2 py-1 text-xs text-ink"
-            >
-              {kind.label}
-              <input
-                type="file"
-                accept={kind.accept}
-                multiple
-                className="sr-only"
-                disabled={uploadingMedia}
-                onChange={(e) => {
-                  const picked = Array.from(e.target.files || []);
-                  e.target.value = '';
-                  uploadMedia(kind, picked);
-                }}
-              />
-            </label>
-          ))}
-        </div>
-        <div className="grid w-full min-w-0 grid-cols-3 gap-2" data-testid="pebble-form-media">
-          {media.map((item) => (
-            <div
-              key={item.media_id}
-              className="relative h-24 min-w-0 overflow-hidden rounded-xl border border-border bg-surface"
-            >
-              <MediaFrame item={item} />
+      <div data-testid="pebble-form-media">
+      <div className="grid w-full min-w-0 grid-cols-3 gap-2">
+        {media.map((item) => {
+          const name = mediaName(item);
+          return (
+            <div key={item.media_id} className="relative h-24 min-w-0">
+              {item.pending ? (
+                <div
+                  aria-busy="true"
+                  className="flex h-full w-full items-center justify-center rounded-xl border border-border bg-surface p-2 text-center text-xs text-muted"
+                >
+                  Loading media
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Open ${name}`}
+                  className="relative h-full w-full min-w-0 overflow-hidden rounded-xl border border-border bg-surface"
+                  onClick={() => openMedia(item)}
+                >
+                  <MediaFrame item={item} />
+                </button>
+              )}
               <button
                 type="button"
-                aria-label={`Remove ${item.filename || item.media_type}`}
-                className="absolute right-1 top-1 rounded-full bg-background px-1.5 text-xs text-ink"
-                onClick={() => setMedia((prev) => prev.filter((row) => row.media_id !== item.media_id))}
+                aria-label={`Remove ${name}`}
+                className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-surface text-ink"
+                onClick={() => removeMediaItem(item)}
               >
-                ×
+                <CloseIcon className="h-3 w-3" />
               </button>
             </div>
-          ))}
-        </div>
+          );
+        })}
+        <label className="flex h-24 min-w-0 cursor-pointer items-center justify-center rounded-xl border border-dashed border-border bg-surface text-ink">
+          <PlusIcon className="h-6 w-6" />
+          <input
+            ref={libraryInputRef}
+            type="file"
+            accept={LIBRARY_ACCEPT}
+            multiple
+            aria-label="Photos & videos"
+            className="sr-only"
+            onChange={(e) => {
+              const picked = Array.from(e.target.files || []);
+              e.target.value = '';
+              uploadLibrary(picked);
+            }}
+          />
+        </label>
       </div>
+      </div>
+    </div>
+  );
 
+  const renderTopics = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">{topicStatus}</p>
       <div>
         <span className="mb-1.5 block text-sm text-muted">Scientific fields</span>
         <div className="flex flex-wrap gap-2">
@@ -651,7 +853,6 @@ const PebbleForm = ({
           })}
         </div>
       </div>
-
       <div>
         <span className="mb-1.5 block text-sm text-muted">Phenomenon tags</span>
         <div className="flex flex-wrap gap-2">
@@ -705,7 +906,22 @@ const PebbleForm = ({
           ))}
         </div>
       </div>
+    </div>
+  );
 
+  const renderNotes = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">{notesStatus}</p>
+      <div>
+        <span className="mb-1.5 block text-sm text-muted">Field notes</span>
+        <FieldNotesEditor value={fieldNotes} onChange={setFieldNotes} />
+      </div>
+    </div>
+  );
+
+  const renderOther = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">{otherStatus}</p>
       <div>
         <span className="mb-1.5 block text-sm text-muted">Further reading</span>
         <div className="space-y-2">
@@ -731,7 +947,6 @@ const PebbleForm = ({
           Add link
         </button>
       </div>
-
       <div>
         <span className="mb-1.5 block text-sm text-muted">Questions to consider</span>
         <div className="space-y-2">
@@ -756,40 +971,177 @@ const PebbleForm = ({
           Add question
         </button>
       </div>
+    </div>
+  );
 
-      <div>
-        <span className="mb-1.5 block text-sm text-muted">Field notes</span>
-        <FieldNotesEditor value={fieldNotes} onChange={setFieldNotes} />
-      </div>
+  const drawerBody = {
+    when: renderWhen,
+    media: renderMedia,
+    topics: renderTopics,
+    notes: renderNotes,
+    other: renderOther,
+  };
 
-      <label className="flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          checked={isPrivate}
-          onChange={(e) => setIsPrivate(e.target.checked)}
-        />
-        Private
-      </label>
-
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
-        <button
-          type="button"
-          disabled={isSubmitting || uploadingHero}
-          onClick={saveProgress}
-          className="rounded-2xl border border-border px-4 py-2.5 text-sm font-medium text-ink"
-        >
-          Save progress
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting || uploadingHero || uploadingMedia}
-          className="rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
-        >
-          {isSubmitting ? 'Saving…' : submitLabel}
-        </button>
-      </div>
-    </form>
+  return (
+    <FormModal
+      stacked
+      meta={saveMeta}
+      title={formTitle}
+      onBack={handleChromeBack}
+      onSubmit={handleSubmit}
+      actions={renderActions()}
+    >
+      {activeDrawer ? (
+        drawerBody[activeDrawer]()
+      ) : (
+        <div className="space-y-4">
+          <label className="block">
+            <span className="mb-1.5 block text-sm text-muted">Title</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm text-muted">At a glance</span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="One or two sentences"
+              className={inputClass}
+            />
+          </label>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-ink">Private</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPrivate}
+              aria-label="Private"
+              onClick={() => setIsPrivate((value) => !value)}
+              className={`relative h-6 w-11 shrink-0 rounded-full ${isPrivate ? 'bg-accent' : 'bg-border'}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white ${
+                  isPrivate ? 'translate-x-5' : ''
+                }`}
+              />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {drawers.map((drawer) => (
+              <button
+                key={drawer.id}
+                type="button"
+                onClick={() => setActiveDrawer(drawer.id)}
+                className="flex w-full flex-col items-start rounded-2xl border border-border px-3 py-3 text-left"
+              >
+                <span className="text-sm font-medium text-ink">{drawer.label}</span>
+                <span className="text-sm text-muted">{drawer.status}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {carouselOpen && activeMedia ? (
+        <Modal open title="Media" testId="media-editor" onClose={() => setCarouselOpen(false)}>
+          <div className="space-y-3">
+            <MediaCarousel
+              items={readyMedia}
+              index={safeMediaIndex}
+              onIndexChange={setMediaIndex}
+              controls
+              adjusting={adjusting}
+              onAdjust={(patch) => updateMediaItem(activeMedia.media_id, patch)}
+            />
+            <label className="block">
+              <span className="mb-1.5 block text-sm text-muted">Title</span>
+              <input
+                aria-label="Title"
+                value={activeMedia.title || ''}
+                placeholder="Title"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault();
+                }}
+                onChange={(e) => updateMediaItem(activeMedia.media_id, { title: e.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm text-muted">Caption</span>
+              <input
+                aria-label="Caption"
+                value={activeMedia.caption || ''}
+                placeholder="Caption"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault();
+                }}
+                onChange={(e) => updateMediaItem(activeMedia.media_id, { caption: e.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {activeMedia.media_type === 'image' ? (
+                <button
+                  type="button"
+                  aria-pressed={heroImageUrl === activeMedia.media_url}
+                  onClick={() => setHeroImageUrl(activeMedia.media_url)}
+                  className={`rounded-2xl px-3 py-1.5 text-sm ${
+                    heroImageUrl === activeMedia.media_url
+                      ? 'bg-accent text-white'
+                      : 'border border-border text-ink'
+                  }`}
+                >
+                  Featured image
+                </button>
+              ) : null}
+              <button
+                type="button"
+                aria-pressed={adjusting}
+                onClick={() => setAdjusting((open) => !open)}
+                className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+              >
+                Adjust preview
+              </button>
+              {adjusting ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateMediaItem(activeMedia.media_id, {
+                        preview_scale: Math.max(1, Number(activeMedia.preview_scale || 1) - 0.25),
+                      })
+                    }
+                    className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+                  >
+                    Zoom out
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateMediaItem(activeMedia.media_id, {
+                        preview_scale: Math.min(3, Number(activeMedia.preview_scale || 1) + 0.25),
+                      })
+                    }
+                    className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+                  >
+                    Zoom in
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                aria-label={`Remove ${mediaName(activeMedia)}`}
+                className="rounded-2xl border border-border px-3 py-1.5 text-sm text-ink"
+                onClick={() => removeMediaItem(activeMedia)}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+    </FormModal>
   );
 };
 
 export default PebbleForm;
+

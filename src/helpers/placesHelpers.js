@@ -13,6 +13,17 @@ export const fetchPlacesApiKey = async () => {
   }
 };
 
+export const droppedPin = (lat, lng) => ({
+  placeId: null,
+  placeName: '',
+  placeLat: lat,
+  placeLng: lng,
+  placeLocality: null,
+  placeAdminArea: null,
+  placeCountry: null,
+  manualPin: true,
+});
+
 export const emptyPlace = (placeName = '') => ({
   placeId: null,
   placeName,

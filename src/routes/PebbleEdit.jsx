@@ -27,7 +27,7 @@ const PebbleEdit = () => {
       pageTitle="Edit pebble"
       submitLabel={pebble.status === 'draft' ? 'Publish' : 'Save changes'}
       isSubmitting={isSubmitting}
-      onDelete={() => setConfirmDelete(true)}
+      onDelete={pebble.status === 'draft' ? () => setConfirmDelete(true) : undefined}
       onSaveDraft={async (payload) => {
         const status = pebble.status === 'published' ? 'published' : 'draft';
         return updatePebble(id, { ...payload, status });

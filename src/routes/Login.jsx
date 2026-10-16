@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import BrandMark from '../components/Brand/BrandMark';
@@ -12,7 +12,17 @@ import { setUser } from '../store/auth.reducer';
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error === 'conflict') {
+      toast.error('That account is already linked to someone else');
+    } else if (error === 'google' || error === 'apple') {
+      toast.error('Sign in did not complete');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async ({ email, password }) => {
     setIsSubmitting(true);
@@ -46,7 +56,7 @@ const Login = () => {
             <LoginForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
           </div>
           <div className="mt-8 w-full">
-            <OAuthButtons showHint={false} />
+            <OAuthButtons />
           </div>
         </div>
       </div>

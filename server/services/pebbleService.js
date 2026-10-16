@@ -50,6 +50,32 @@ const requireDb = () => {
   }
 };
 
+const groupRows = (rows) => {
+  const grouped = new Map();
+  for (const row of rows || []) {
+    if (row.pebble_id == null) continue;
+    const { pebble_id: pebbleId, ...rest } = row;
+    if (!grouped.has(pebbleId)) grouped.set(pebbleId, []);
+    grouped.get(pebbleId).push(rest);
+  }
+  return grouped;
+};
+
+const shapePebble = (row, extras) => {
+  const { favorite_rank: _favoriteRank, ...pebble } = row;
+  return {
+    ...pebble,
+    phenomena: extras.phenomena,
+    media: extras.media,
+    fields: extras.fields,
+    other_tags: extras.otherTags,
+    resources: extras.resources,
+    questions: extras.questions,
+    like_count: row.like_count ?? extras.likeCount ?? 0,
+    liked_by_me: row.liked_by_me ?? extras.liked,
+  };
+};
+
 const enrichPebble = async (row, viewerId = null) => {
   if (!row) return null;
   const [phenomena, media, fields, otherTags, resources, questions, likeCountResult, likedResult] =
@@ -65,18 +91,50 @@ const enrichPebble = async (row, viewerId = null) => {
       ? query(pebbleQueries.userLiked, [viewerId, row.pebble_id])
       : Promise.resolve({ rows: [] }),
   ]);
-  const { favorite_rank: _favoriteRank, ...pebble } = row;
-  return {
-    ...pebble,
+  return shapePebble(row, {
     phenomena: phenomena.rows,
     media: media.rows,
     fields: fields.rows,
-    other_tags: otherTags.rows,
+    otherTags: otherTags.rows,
     resources: resources.rows,
     questions: questions.rows,
-    like_count: row.like_count ?? likeCountResult.rows[0]?.count ?? 0,
-    liked_by_me: row.liked_by_me ?? Boolean(likedResult.rows[0]),
-  };
+    likeCount: likeCountResult.rows[0]?.count,
+    liked: Boolean(likedResult.rows[0]),
+  });
+};
+
+const enrichMany = async (rows, viewerId = null) => {
+  if (!rows.length) return [];
+  const ids = rows.map((row) => row.pebble_id);
+  const [phenomena, media, fields, otherTags, resources, questions, liked] = await Promise.all([
+    query(pebbleQueries.listPhenomenaForPebbles, [ids]),
+    query(pebbleQueries.listMediaForPebbles, [ids]),
+    query(pebbleQueries.listFieldsForPebbles, [ids]),
+    query(pebbleQueries.listOtherTagsForPebbles, [ids]),
+    query(pebbleQueries.listResourcesForPebbles, [ids]),
+    query(pebbleQueries.listQuestionsForPebbles, [ids]),
+    viewerId
+      ? query(pebbleQueries.likedAmong, [viewerId, ids])
+      : Promise.resolve({ rows: [] }),
+  ]);
+  const phenomenaBy = groupRows(phenomena.rows);
+  const mediaBy = groupRows(media.rows);
+  const fieldsBy = groupRows(fields.rows);
+  const tagsBy = groupRows(otherTags.rows);
+  const resourcesBy = groupRows(resources.rows);
+  const questionsBy = groupRows(questions.rows);
+  const likedIds = new Set((liked.rows || []).map((row) => row.pebble_id));
+  return rows.map((row) =>
+    shapePebble(row, {
+      phenomena: phenomenaBy.get(row.pebble_id) || [],
+      media: mediaBy.get(row.pebble_id) || [],
+      fields: fieldsBy.get(row.pebble_id) || [],
+      otherTags: tagsBy.get(row.pebble_id) || [],
+      resources: resourcesBy.get(row.pebble_id) || [],
+      questions: questionsBy.get(row.pebble_id) || [],
+      liked: likedIds.has(row.pebble_id),
+    })
+  );
 };
 
 const canViewPebble = async (row, viewerId) => {
@@ -156,7 +214,13 @@ const setQuestions = async (pebbleId, questions = []) => {
   }
 };
 
-const setMedia = async (pebbleId, mediaIds) => {
+const clampNumber = (value, fallback, min, max) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, numeric));
+};
+
+const setMedia = async (pebbleId, mediaIds, mediaDetails) => {
   const ids = (Array.isArray(mediaIds) ? mediaIds : [])
     .map((id) => Number(id))
     .filter((id) => Number.isFinite(id));
@@ -168,6 +232,69 @@ const setMedia = async (pebbleId, mediaIds) => {
   for (const id of ids) {
     await query(pebbleQueries.attachMedia, [id, pebbleId]);
   }
+  const details = Array.isArray(mediaDetails) ? mediaDetails : [];
+  for (const item of details) {
+    const id = Number(item.mediaId ?? item.media_id);
+    if (!Number.isFinite(id)) continue;
+    const title = String(item.title || '').trim().slice(0, 160);
+    const caption = String(item.caption || '').trim().slice(0, 280);
+    await query(pebbleQueries.updateMediaDetails, [
+      id,
+      pebbleId,
+      title || null,
+      caption || null,
+      clampNumber(item.previewX ?? item.preview_x, 50, 0, 100),
+      clampNumber(item.previewY ?? item.preview_y, 50, 0, 100),
+      clampNumber(item.previewScale ?? item.preview_scale, 1, 1, 3),
+    ]);
+  }
+};
+
+const phenomenonList = (phenomenonIds) =>
+  (Array.isArray(phenomenonIds) ? phenomenonIds : [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id));
+
+const assertPhenomenonList = (phenomenonIds) => {
+  if (phenomenonList(phenomenonIds).length) return;
+  const err = new Error('Choose a phenomenon topic');
+  err.status = 400;
+  throw err;
+};
+
+const hasCoordinate = (value) => value != null && value !== '' && Number.isFinite(Number(value));
+
+const assertLocation = (status, data, existing) => {
+  if (status !== 'published') return;
+  const lat = data.placeLat !== undefined ? data.placeLat : existing?.place_lat;
+  const lng = data.placeLng !== undefined ? data.placeLng : existing?.place_lng;
+  if (hasCoordinate(lat) && hasCoordinate(lng)) return;
+  const err = new Error('Add a location');
+  err.status = 400;
+  throw err;
+};
+
+const assertNamedPin = (status, data, existing) => {
+  if (status !== 'published') return;
+  const lat = data.placeLat !== undefined ? data.placeLat : existing?.place_lat;
+  const lng = data.placeLng !== undefined ? data.placeLng : existing?.place_lng;
+  if (!hasCoordinate(lat) || !hasCoordinate(lng)) return;
+  const placeName = data.placeName !== undefined ? data.placeName : existing?.place_name;
+  const pinName = data.pinName !== undefined ? data.pinName : existing?.pin_name;
+  if (String(placeName || '').trim() || String(pinName || '').trim()) return;
+  const err = new Error('Name the pin');
+  err.status = 400;
+  throw err;
+};
+
+const assertPublishedPhenomena = async (status, pebbleId, data) => {
+  if (status !== 'published') return;
+  if (data.phenomenonIds !== undefined) {
+    assertPhenomenonList(data.phenomenonIds);
+    return;
+  }
+  const { rows } = await query(pebbleQueries.countPhenomena, [pebbleId]);
+  if (!rows[0]?.count) assertPhenomenonList([]);
 };
 
 const assertNotes = (fieldNotes) => {
@@ -313,12 +440,21 @@ const applyRelations = async (pebbleId, data) => {
   if (data.otherTags !== undefined) await setOtherTags(pebbleId, data.otherTags);
   if (data.resources !== undefined) await setResources(pebbleId, data.resources);
   if (data.questions !== undefined) await setQuestions(pebbleId, data.questions);
-  if (data.mediaIds !== undefined) await setMedia(pebbleId, data.mediaIds);
+  if (data.mediaIds !== undefined || data.media !== undefined) {
+    const ids =
+      data.mediaIds !== undefined
+        ? data.mediaIds
+        : (data.media || []).map((item) => item.mediaId ?? item.media_id);
+    await setMedia(pebbleId, ids, data.media);
+  }
 };
 
 const create = async (authorId, data) => {
   requireDb();
-  const { values } = columnValues(authorId, data || {});
+  const { status, values } = columnValues(authorId, data || {});
+  if (status === 'published') assertPhenomenonList(data?.phenomenonIds);
+  assertLocation(status, data || {});
+  assertNamedPin(status, data || {});
   const { rows } = await query(pebbleQueries.insert, values);
   const pebble = rows[0];
   await applyRelations(pebble.pebble_id, {
@@ -328,6 +464,7 @@ const create = async (authorId, data) => {
     resources: data.resources || [],
     questions: data.questions || [],
     mediaIds: data.mediaIds || [],
+    media: data.media,
   });
   return enrichPebble(await getRaw(pebble.pebble_id), authorId);
 };
@@ -363,7 +500,10 @@ const update = async (pebbleId, authorId, data) => {
     throw err;
   }
 
-  const { values } = columnValues(authorId, data, existing);
+  const { status, values } = columnValues(authorId, data, existing);
+  await assertPublishedPhenomena(status, pebbleId, data);
+  assertLocation(status, data, existing);
+  assertNamedPin(status, data, existing);
   const [, ...rest] = values;
   const { rows } = await query(pebbleQueries.update, [pebbleId, ...rest, authorId]);
   await applyRelations(pebbleId, data);
@@ -386,7 +526,7 @@ const getFeed = async (viewerId, filters = {}) => {
   const favorites = Boolean(filters.favorites);
   const mine = Boolean(filters.mine);
   const { rows } = await query(pebbleQueries.feed, [viewerId, favorites, mine]);
-  return Promise.all(rows.map((row) => enrichPebble(row, viewerId)));
+  return enrichMany(rows, viewerId);
 };
 
 const normalizeSearchFilters = (filters = {}) => {
@@ -397,11 +537,21 @@ const normalizeSearchFilters = (filters = {}) => {
     filters.fieldId != null && String(filters.fieldId).trim() !== ''
       ? Number(filters.fieldId)
       : null;
+  const notes = []
+    .concat(filters.notes || [])
+    .map((term) => String(term || '').trim())
+    .filter(Boolean);
+  const phenomenonId =
+    filters.phenomenonId != null && String(filters.phenomenonId).trim() !== ''
+      ? Number(filters.phenomenonId)
+      : null;
   return {
     q: q || null,
     author: author || null,
     region: region || null,
     fieldId: Number.isFinite(fieldId) ? fieldId : null,
+    phenomenonId: Number.isFinite(phenomenonId) ? phenomenonId : null,
+    notes,
     favorites: Boolean(filters.favorites),
     mine: Boolean(filters.mine),
     hasPhoto: Boolean(filters.hasPhoto),
@@ -412,7 +562,7 @@ const normalizeSearchFilters = (filters = {}) => {
 
 const listForMap = async (viewerId, filters = {}) => {
   requireDb();
-  const { q, author, region, fieldId, favorites, mine, hasPhoto, hasVideo, hasData } =
+  const { q, author, region, fieldId, phenomenonId, notes, favorites, mine, hasPhoto, hasVideo, hasData } =
     normalizeSearchFilters(filters);
   const { rows } = await query(pebbleQueries.mapPins, [
     viewerId,
@@ -425,6 +575,8 @@ const listForMap = async (viewerId, filters = {}) => {
     hasPhoto,
     hasVideo,
     hasData,
+    phenomenonId,
+    notes,
   ]);
   return rows.map(({ favorite_rank: _favoriteRank, ...pin }) => pin);
 };
@@ -433,9 +585,21 @@ const search = async (filters = {}, viewerId = null) => {
   requireDb();
   const normalized =
     typeof filters === 'string' ? normalizeSearchFilters({ q: filters }) : normalizeSearchFilters(filters);
-  const { q, author, region, fieldId, favorites, mine, hasPhoto, hasVideo, hasData } = normalized;
+  const { q, author, region, fieldId, phenomenonId, notes, favorites, mine, hasPhoto, hasVideo, hasData } = normalized;
   if (mine && !viewerId) return [];
-  if (!q && !author && !region && !fieldId && !favorites && !mine && !hasPhoto && !hasVideo && !hasData) {
+  if (
+    !q &&
+    !author &&
+    !region &&
+    !fieldId &&
+    !phenomenonId &&
+    !notes.length &&
+    !favorites &&
+    !mine &&
+    !hasPhoto &&
+    !hasVideo &&
+    !hasData
+  ) {
     return [];
   }
   const { rows } = await query(pebbleQueries.search, [
@@ -449,14 +613,16 @@ const search = async (filters = {}, viewerId = null) => {
     hasPhoto,
     hasVideo,
     hasData,
+    phenomenonId,
+    notes,
   ]);
-  return Promise.all(rows.map((row) => enrichPebble(row, viewerId)));
+  return enrichMany(rows, viewerId);
 };
 
 const listByAuthor = async (authorId, viewerId = null) => {
   requireDb();
   const { rows } = await query(pebbleQueries.listByAuthor, [authorId, viewerId]);
-  return Promise.all(rows.map((row) => enrichPebble(row, viewerId)));
+  return enrichMany(rows, viewerId);
 };
 
 const like = async (pebbleId, userId) => {

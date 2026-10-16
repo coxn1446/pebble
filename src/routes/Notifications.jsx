@@ -95,7 +95,7 @@ const Notifications = () => {
                 >
                   <UserAvatar user={actor} className="h-10 w-10 rounded-full" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm text-ink">
+                    <span className="block break-words text-sm text-ink">
                       <Link
                         to={`/u/${item.actor_username}`}
                         className="font-semibold hover:underline"

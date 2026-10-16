@@ -1,4 +1,6 @@
 const path = require('path');
+const os = require('os');
+const { randomUUID } = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
@@ -29,7 +31,13 @@ module.exports = async ({ app }) => {
   app.set(
     'upload',
     multer({
-      storage: multer.memoryStorage(),
+      storage: multer.diskStorage({
+        destination: os.tmpdir(),
+        filename: (_req, file, cb) => {
+          cb(null, `${randomUUID()}${path.extname(file.originalname || '')}`);
+        },
+      }),
+      limits: { fileSize: 200 * 1024 * 1024 },
     })
   );
 

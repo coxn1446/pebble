@@ -66,9 +66,10 @@ describe('PebbleEdit', () => {
 
     renderEdit();
 
-    expect(await screen.findAllByRole('button', { name: 'Save progress' })).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Publish' })).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete draft' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Discard' })).not.toBeInTheDocument();
   });
 
   test('offers Save changes on a published pebble', async () => {
@@ -81,8 +82,12 @@ describe('PebbleEdit', () => {
 
     renderEdit();
 
-    expect(await screen.findAllByRole('button', { name: 'Save changes' })).toHaveLength(2);
+    expect(await screen.findByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Discard' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete draft' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete draft' })).not.toBeInTheDocument();
   });
 
   test('publishing a draft stores published and does not save it back as a draft', async () => {
@@ -92,6 +97,9 @@ describe('PebbleEdit', () => {
       title: 'Shelf draft',
       field_notes: [],
       media: [],
+      phenomena: [{ phenomenon_id: 9, field_id: 2, name: 'Evolution' }],
+      place_lat: 10,
+      place_lng: 20,
     });
     updatePebble.mockImplementation(async (id, body) => ({
       pebble_id: Number(id),
@@ -124,6 +132,9 @@ describe('PebbleEdit', () => {
       title: 'Shelf draft',
       field_notes: [],
       media: [],
+      phenomena: [{ phenomenon_id: 9, field_id: 2, name: 'Evolution' }],
+      place_lat: 10,
+      place_lng: 20,
     });
     updatePebble.mockImplementation(async (id, body) => {
       if (body.status === 'published') throw new Error('Database is unavailable');
@@ -138,7 +149,7 @@ describe('PebbleEdit', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Shelf draft');
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Shelf draft revised' } });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Save progress' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => {
       expect(updatePebble.mock.calls.at(-1)[1]).toMatchObject({
         status: 'draft',
@@ -157,7 +168,7 @@ describe('PebbleEdit', () => {
     deletePebble.mockResolvedValue({ success: true });
 
     renderEdit();
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete pebble' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete draft' }));
     expect(screen.getByTestId('delete-pebble-modal')).toHaveTextContent(
       'Are you sure? Deletion is permanent.'
     );

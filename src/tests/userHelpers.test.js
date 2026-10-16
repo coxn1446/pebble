@@ -1,4 +1,4 @@
-import { fetchMe, fetchUserProfile, updateMe } from '../helpers/userHelpers';
+import { fetchMe, fetchMyProfile, fetchUserProfile, updateMe } from '../helpers/userHelpers';
 import { createMockUser } from './__mocks__/fetchMocks';
 
 describe('userHelpers', () => {
@@ -24,6 +24,16 @@ describe('userHelpers', () => {
     });
     const result = await updateMe({ contentSearchable: false });
     expect(result.content_searchable).toBe(false);
+  });
+
+  test('fetchMyProfile loads the signed-in profile without a username', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ user: createMockUser(), pebbles: [] }),
+    });
+    const data = await fetchMyProfile();
+    expect(global.fetch).toHaveBeenCalledWith('/api/users/me/profile', { credentials: 'include' });
+    expect(data.user.username).toBe('testuser');
   });
 
   test('fetchUserProfile encodes username and returns pebbles', async () => {

@@ -148,12 +148,25 @@ describe('Welcome', () => {
     expect(screen.queryByText('Flora')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Learn More' })).toHaveAttribute('href', '/about-us');
     const learnMore = screen.getByRole('link', { name: 'Learn More' });
-    expect(learnMore.parentElement).toHaveClass('flex', 'w-full', 'justify-center', 'pb-6');
+    expect(learnMore.parentElement).toHaveClass('flex', 'w-full', 'justify-center', 'pb-2', 'md:pb-6');
     expect(screen.getByTestId('methodology-copy')).toHaveClass('w-full');
     expect(screen.getByText(/observe and document meaningful real-world phenomena/i)).not.toHaveClass(
       'max-w-sm'
     );
-    expect(screen.getByTestId('methodology-body')).toHaveClass('overflow-y-auto', 'pb-8');
+    expect(screen.getByTestId('methodology-body')).toHaveClass(
+      'overflow-hidden',
+      'md:overflow-y-auto',
+      'pb-4',
+      'md:pb-8'
+    );
+    expect(screen.getByText(/the pebble platform operates on a simple, iterative cycle/i)).toHaveClass(
+      'hidden',
+      'md:block'
+    );
+    expect(
+      screen.getByRole('img', { name: 'A pebble observation card with a verified map location' })
+        .parentElement
+    ).toHaveClass('hidden', 'md:flex');
   });
 
   test('keeps audience and methodology section headers size-matched', () => {
@@ -169,14 +182,19 @@ describe('Welcome', () => {
     expect(audienceTitle).toHaveClass('leading-none');
     const audienceGaps = screen.getAllByTestId('audience-gap');
     expect(audienceGaps).toHaveLength(2);
-    audienceGaps.forEach((gap) => expect(gap).toHaveClass('h-16'));
+    audienceGaps.forEach((gap) => expect(gap).toHaveClass('h-8', 'md:h-16'));
     expect(screen.getByTestId('audience-note')).toHaveClass('leading-none');
     expect(screen.getByTestId('audience-note')).not.toHaveClass('mt-8');
     expect(methodologyLabel).toHaveClass('text-sm', 'text-moss');
     expect(audienceLabel).toHaveClass('text-sm', 'text-moss');
     expect(methodologyTitle).toHaveClass('text-4xl', 'md:text-5xl', 'leading-tight');
     expect(audienceTitle).toHaveClass('text-4xl', 'md:text-5xl', 'leading-none');
-    expect(screen.getByTestId('audience-stage')).toHaveClass('justify-center', 'py-16');
+    expect(screen.getByTestId('audience-stage')).toHaveClass(
+      'justify-center',
+      'overflow-hidden',
+      'py-8',
+      'md:py-20'
+    );
   });
 
   test('renders audience section for each audience type and science note', () => {
