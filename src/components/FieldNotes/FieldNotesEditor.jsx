@@ -181,7 +181,12 @@ const Leaf = ({ attributes, children, leaf }) => {
   return <span {...attributes}>{content}</span>;
 };
 
-const FieldNotesEditor = ({ value, onChange, wordCap = FIELD_NOTES_WORD_CAP }) => {
+const FieldNotesEditor = ({
+  value,
+  onChange,
+  wordCap = FIELD_NOTES_WORD_CAP,
+  placeholder = 'Write field notes…',
+}) => {
   const editor = useMemo(() => withMedia(withHistory(withReact(createEditor()))), []);
   const initial = normalizeFieldNotes(value);
   const [wordCount, setWordCount] = useState(() => countFieldNoteWords(initial));
@@ -197,7 +202,7 @@ const FieldNotesEditor = ({ value, onChange, wordCap = FIELD_NOTES_WORD_CAP }) =
         initialValue={initial.length ? initial : EMPTY_FIELD_NOTES}
         onChange={(next) => {
           const count = countFieldNoteWords(next);
-          if (count > wordCap) {
+          if (wordCap != null && count > wordCap) {
             editor.undo();
             return;
           }
@@ -221,9 +226,11 @@ const FieldNotesEditor = ({ value, onChange, wordCap = FIELD_NOTES_WORD_CAP }) =
           </button>
           <ListButton format="bulleted-list" label="Bulleted list" />
           <ListButton format="numbered-list" label="Numbered list" />
-          <span className="ml-auto text-xs text-muted" data-testid="field-notes-count">
-            {wordCount} / {wordCap}
-          </span>
+          {wordCap != null ? (
+            <span className="ml-auto text-xs text-muted" data-testid="field-notes-count">
+              {wordCount} / {wordCap}
+            </span>
+          ) : null}
         </div>
         <div
           data-testid="field-notes-body"
@@ -234,7 +241,7 @@ const FieldNotesEditor = ({ value, onChange, wordCap = FIELD_NOTES_WORD_CAP }) =
             className="min-h-full px-3 py-3 text-base outline-none"
             renderElement={renderElement}
             renderLeaf={renderLeaf}
-            placeholder="Write field notes…"
+            placeholder={placeholder}
           />
         </div>
       </Slate>

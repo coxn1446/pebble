@@ -1,7 +1,7 @@
 # Pebble Architecture
 
 ## Last Updated
-2026-10-12 (continent camera, newest feed, create drawers)
+2026-10-17 (feature requests)
 
 Keep this file as **current state**. Prefer a short dated note here, not a running changelog novel. Agent constitution: `AGENTS.md`. UI tokens: `tailwind.config.js`. Shared skills live in `.cursor/skills/` (synced from App Shell `cursor-templates`).
 
@@ -11,7 +11,7 @@ Pebble is an AuraSphere-style app: React (Vite) + Express + PostgreSQL + Capacit
 
 Users create research posts (“pebbles”) with Slate field notes, tag scientific phenomena, follow others, like and collect pebbles, and report/block offensive content.
 
-Local email/password auth is implemented. Google and Apple sign-in link onto `users.google_id` and `users.apple_id` when those credentials are set; a password hash on the same row keeps local login. Stripe, Firebase, and email remain stubbed. GCS uploads are wired with a local fallback. Google Places Autocomplete is live when `GOOGLE_PLACES_API_KEY` is set (manual text fallback otherwise).
+Local email/password auth is implemented. Google and Apple sign-in link onto `users.google_id` and `users.apple_id` when those credentials are set; a password hash on the same row keeps local login. Stripe and Firebase remain stubbed. Feature-request mail sends through Resend when `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are set. The from address must be a sender verified on that Resend account. GCS uploads are wired with a local fallback. Google Places Autocomplete is live when `GOOGLE_PLACES_API_KEY` is set (manual text fallback otherwise).
 
 ## Tech Stack
 
@@ -31,7 +31,7 @@ Components → helpers → routes → services → queries
 
 - `/` — marketing home for guests (snap scroll: hero → audience → methodology); map + viewport feed for authenticated users. Desktop is always a split (feed beside the globe). On a phone, search sits over the globe and the feed is a sheet that peeks above the tab bar until it is expanded.
 - `/how-it-works` — How it Works + Explore Pebbles (marketing; no app nav). On a phone, Collect / Connect / Create are three horizontal slides, and each explore row is one horizontal slide with How it was, Pebble, and How it can be stacked.
-- `/about-us` — About Us letter + first four field-journey photos, then How we're different + remaining four photos (snap scroll like home / how it works; no app nav). On a phone, that story is four horizontal slides with no Inspiration / About Us title. Each slide shows two journey stops side by side on the top half and the matching part of the letter on the bottom half. One horizontal timeline line runs through the stops and continues from slide to slide. Phone carousels keep a fixed dot row: the current slide is filled, and the other slides stay unfilled.
+- `/about-us` — About Us letter + first four field-journey photos, then How we're different + remaining four photos (snap scroll like home / how it works; no app nav). On a phone, that story is four horizontal slides with no Inspiration / About Us title. Each slide shows two journey stops side by side on the top half and the matching part of the letter on the bottom half. Each stop is the cropped drawing plus an HTML caption of the location and the field named in the file, so every photo and caption occupies the same box. One horizontal timeline line runs through the stops and continues from slide to slide. Phone carousels keep a fixed dot row: the current slide is filled, and the other slides stay unfilled.
 - `/login` — guest-only sign-in (welcome and login have no public signup links); marketing footer
 - `/register` — guest-only account creation, kept unlisted so accounts can be created by hand; marketing footer
 - `/map` — redirects to `/`
@@ -46,7 +46,7 @@ Standalone `Feed` route component remains in the codebase for potential mobile r
 
 Layout: `ContentArea` — from `md` up, a sticky left sidebar (authenticated only, hidden on `/how-it-works` and `/about-us`) plus independently scrolling main content. On a phone the same three items are a bottom tab bar with safe-area padding, and the page above it scrolls. The authenticated map is edge-to-edge on a phone. Full-width pane for map, guest home, how it works, about us, guest login/register, notifications, profile, settings, and pebble detail. Guest marketing header shows Pebble, About Us, and How it Works inline from `lg` up; below `lg` those links sit in a hamburger panel. Sign In stays in the bar. Each guest marketing section is one `h-dvh` snap slide. Below the `md` breakpoint the slide does not scroll vertically: Methodology hides its intro paragraph and illustration, and extra About / How it Works content moves into horizontal snap carousels that fit the slide. Each of those carousels shows a dot for every slide and fills the dot for the slide in view. From `md` up, overflow still scrolls inside the slide. Login and register scroll on short screens with safe-area padding. Unauthenticated marketing and auth screens include the shared Welcome footer. Below `md` that footer is the copyright line only; from `md` up it also shows the mark and Privacy, Terms, and Contact.
 
-Nav (authenticated): Map, Notifications, Profile. On a phone the tab bar also has Create, which asks for a pebble or a collection and then opens that form. On a wider screen, Tutorial and Sign out stay at the bottom of the left sidebar. On a phone those two are not in the tab bar; Sign out is behind the profile gear. Icons in `src/components/Icons/Icons.jsx`. Dialogs (drafts, followers, following, create, add to collection, and delete) are a card inset from the edges and the notch, closed with the corner X. Form sheets still fill the screen.
+Nav (authenticated): Map, Notifications, Profile. On a phone the tab bar also has Create, which asks for a pebble or a collection and then opens that form. On a wider screen, Tutorial and Sign out stay at the bottom of the left sidebar. On a phone those two are not in the tab bar; Sign out is behind the profile gear. Allowed accounts also see Submit A Feature Request: above Tutorial on a wide screen, and inside the Create panel on a phone. That opens a dialog with Request (rich text and files) and Log (description, release date, status). Icons in `src/components/Icons/Icons.jsx`. Dialogs (drafts, followers, following, create, feature request, add to collection, and delete) are a card inset from the edges and the notch, closed with the corner X. Form sheets still fill the screen.
 
 ## Auth
 
@@ -117,6 +117,15 @@ Nav (authenticated): Map, Notifications, Profile. On a phone the tab bar also ha
 - `POST /api/notifications/read-all`
 - `POST /api/notifications/:id/read`
 - `GET/PATCH /api/notifications/preferences`
+
+### Feature requests
+Allowed accounts only. Development and QA (`DB_SCHEMA` is not `prod`): users 18 and 2 can submit and read the log; only user 18 can add log rows. Production (`DB_SCHEMA=prod`): users 1 and 2 can submit and read the log; only user 1 can add log rows. A submission emails `williamwildernash@gmail.com` through Resend with the request text and the files. Resend accepts about 40 MB of attachments after encoding; a larger message is sent again with links to the files. Files have no application size cap. When Cloud Storage is configured they upload directly so a large file is not held on the instance; otherwise they post to the app. Pebble media stays capped at 200 MB.
+- `GET /api/feature-requests/access` — `{ canSubmit, canManageLog }`
+- `GET /api/feature-requests` — log rows (`description`, `release_date`, `status` of `not_started` | `wip` | `completed`)
+- `POST /api/feature-requests` — `{ body, files }` Slate document plus stored files. Returns `{ request, emailed }`
+- `POST /api/feature-requests/files` — multipart file, no size cap
+- `POST /api/feature-requests/files/session` and `POST /api/feature-requests/files/complete` — direct upload when storage is configured
+- `POST /api/feature-requests/log` — `{ description, releaseDate, status }` for the log manager only
 
 ## Privacy rules
 

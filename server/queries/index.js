@@ -7,6 +7,7 @@ const socialQueries = require('./socialQueries');
 const moderationQueries = require('./moderationQueries');
 const notificationQueries = require('./notificationQueries');
 const searchQueries = require('./searchQueries');
+const featureRequestQueries = require('./featureRequestQueries');
 
 module.exports = {
   userQueries,
@@ -18,4 +19,5 @@ module.exports = {
   moderationQueries,
   notificationQueries,
   searchQueries,
+  featureRequestQueries,
 };

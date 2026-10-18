@@ -236,10 +236,86 @@ const completeUpload = async ({ objectName, mediaType, filename, contentType }) 
   return insertMediaRow(publicUrl(bucketName, safeName), resolvedType, filename);
 };
 
+const featureObjectName = (filename) => {
+  const ext = path.extname(filename || '').toLowerCase();
+  return `feature-requests/${randomUUID()}${ext}`;
+};
+
+const storedFeatureFile = (objectName, filename, contentType, fileUrl) => ({
+  file_url: fileUrl,
+  file_name: path.basename(filename || objectName).slice(0, 512) || 'file',
+  content_type: String(contentType || 'application/octet-stream').slice(0, 255),
+  storage_key: objectName,
+});
+
+/** Feature-request files have no size cap. Pebble media still uses MAX_UPLOAD_BYTES. */
+const storeUnboundedFile = async (file) => {
+  if (!file?.buffer && !file?.path) {
+    const err = new Error('File is required');
+    err.status = 400;
+    throw err;
+  }
+  const objectName = featureObjectName(file.originalname);
+  const contentType = file.mimetype || 'application/octet-stream';
+  try {
+    const fileUrl = await storeFile(file, objectName, contentType);
+    return storedFeatureFile(objectName, file.originalname, contentType, fileUrl);
+  } finally {
+    cleanupTemp(file);
+  }
+};
+
+const createFeatureUploadSession = async ({ filename, contentType }) => {
+  const bucketName = getBucketName();
+  const storage = getStorage();
+  if (!bucketName || !storage) return { direct: false };
+
+  const bucket = storage.bucket(bucketName);
+  await ensureUploadCors(bucket);
+  const objectName = featureObjectName(filename);
+  const type = contentType || 'application/octet-stream';
+  try {
+    const [uploadUrl] = await bucket.file(objectName).getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000,
+      contentType: type,
+    });
+    return {
+      direct: true,
+      uploadUrl,
+      objectName,
+      contentType: type,
+    };
+  } catch (err) {
+    console.warn('Signed upload unavailable:', err.message);
+    return { direct: false };
+  }
+};
+
+const completeFeatureUpload = async ({ objectName, filename, contentType }) => {
+  const safeName = String(objectName || '');
+  if (!/^feature-requests\/[0-9a-f-]{36}(\.[a-z0-9]+)?$/i.test(safeName)) {
+    const err = new Error('Upload could not be finished');
+    err.status = 400;
+    throw err;
+  }
+  const bucketName = getBucketName();
+  if (!bucketName) {
+    const err = new Error('Storage is not configured');
+    err.status = 503;
+    throw err;
+  }
+  return storedFeatureFile(safeName, filename, contentType, publicUrl(bucketName, safeName));
+};
+
 module.exports = {
   uploadBuffer,
   createUploadSession,
   completeUpload,
+  storeUnboundedFile,
+  createFeatureUploadSession,
+  completeFeatureUpload,
   inferMediaType,
   resolveMediaType,
   MEDIA_TYPES,

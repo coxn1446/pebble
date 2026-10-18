@@ -12,6 +12,7 @@ const flagsRoutes = require('./flags');
 const notificationsRoutes = require('./notifications');
 const searchRoutes = require('./search');
 const weatherRoutes = require('./weather');
+const featureRequestRoutes = require('./featureRequests');
 const { isDbHealthy } = require('../db');
 
 module.exports = () => {
@@ -52,6 +53,7 @@ module.exports = () => {
   router.use('/notifications', notificationsRoutes());
   router.use('/search', searchRoutes());
   router.use('/weather', weatherRoutes());
+  router.use('/feature-requests', featureRequestRoutes());
 
   return router;
 };

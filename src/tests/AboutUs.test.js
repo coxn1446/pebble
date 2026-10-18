@@ -46,7 +46,6 @@ describe('AboutUs', () => {
     expect(screen.getByText('AUG 2025')).toBeInTheDocument();
     expect(screen.getByText('JUL 2026')).toBeInTheDocument();
     expect(screen.queryByText(/\| canada/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/galapagos islands/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Dec 2022')).not.toBeInTheDocument();
     expect(screen.queryByText(/costa rica/i)).not.toBeInTheDocument();
     expect(
@@ -63,6 +62,21 @@ describe('AboutUs', () => {
         name: 'Two climbers roped together on a mountain ridge in Kyrgyzstan',
       })
     ).toBeInTheDocument();
+    [
+      ['Canada', 'Chemistry'],
+      ['New York', 'Entomology'],
+      ['Panama', 'Marine Biology'],
+      ['Italy', 'Geology'],
+      ['Galapagos Islands', 'Galapagos'],
+      ['Antarctica', 'Climate Science'],
+      ['Sa Pa', 'Agricultural Science'],
+      ['Kyrgyzstan', 'Physics'],
+    ].forEach(([place, field]) => {
+      const caption = screen.getByText(field).closest('figcaption');
+      expect(caption).toHaveTextContent(place);
+      expect(caption).toHaveClass('h-12', 'font-display');
+      expect(caption.closest('figure').querySelector('img')).toBeInTheDocument();
+    });
     expect(
       screen.getByText(/nature inspires the best things in life, and pebble is no different/i)
     ).toHaveClass('font-semibold');

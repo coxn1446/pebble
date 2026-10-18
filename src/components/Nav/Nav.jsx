@@ -4,8 +4,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { clearUser, selectUser } from '../../store/auth.reducer';
 import { logout } from '../../helpers/authHelpers';
 import { fetchNotifications } from '../../helpers/notificationHelpers';
+import { fetchFeatureAccess } from '../../helpers/featureRequestHelpers';
 import { useMobileWelcome } from '../Welcome/WelcomeShared';
 import BrandMark from '../Brand/BrandMark';
+import FeatureRequestModal from '../FeatureRequests/FeatureRequestModal';
 import NewCollectionForm from '../Collections/NewCollectionForm';
 import Modal from '../Modal/Modal';
 import UserAvatar from '../Profile/UserAvatar';
@@ -35,6 +37,8 @@ const Nav = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [showCollection, setShowCollection] = useState(false);
+  const [showFeatureRequest, setShowFeatureRequest] = useState(false);
+  const [featureAccess, setFeatureAccess] = useState({ canSubmit: false, canManageLog: false });
 
   useEffect(() => {
     let active = true;
@@ -49,6 +53,26 @@ const Nav = () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.user_id) return undefined;
+    let active = true;
+    fetchFeatureAccess()
+      .then((access) => {
+        if (active) {
+          setFeatureAccess({
+            canSubmit: Boolean(access?.canSubmit),
+            canManageLog: Boolean(access?.canManageLog),
+          });
+        }
+      })
+      .catch(() => {
+        if (active) setFeatureAccess({ canSubmit: false, canManageLog: false });
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.user_id]);
 
   const handleLogout = async () => {
     await logout();
@@ -123,6 +147,18 @@ const Nav = () => {
             >
               Collection
             </button>
+            {featureAccess.canSubmit ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreate(false);
+                  setShowFeatureRequest(true);
+                }}
+                className="rounded-2xl border border-border px-3 py-2 text-center text-sm text-ink"
+              >
+                Submit A Feature Request
+              </button>
+            ) : null}
           </div>
         </Modal>
       ) : null}
@@ -133,6 +169,12 @@ const Nav = () => {
             setShowCollection(false);
             window.dispatchEvent(new Event('pebble-collections-changed'));
           }}
+        />
+      ) : null}
+      {showFeatureRequest ? (
+        <FeatureRequestModal
+          canManageLog={featureAccess.canManageLog}
+          onClose={() => setShowFeatureRequest(false)}
         />
       ) : null}
     </>
@@ -159,6 +201,7 @@ const Nav = () => {
   }
 
   return (
+    <>
     <aside className="flex h-full min-h-0 w-56 shrink-0 flex-col overflow-y-auto border-r border-border/80 bg-surface/80 px-4 py-6 backdrop-blur-md">
       <BrandMark size="sm" to="/" />
       <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1">
@@ -166,6 +209,15 @@ const Nav = () => {
         {notificationsLink}
         {profileLink}
         <div className="mt-auto flex flex-col gap-2 pt-6">
+          {featureAccess.canSubmit ? (
+            <button
+              type="button"
+              onClick={() => setShowFeatureRequest(true)}
+              className="rounded-2xl px-3 py-2 text-left text-sm text-muted hover:bg-background hover:text-ink"
+            >
+              Submit A Feature Request
+            </button>
+          ) : null}
           <NavLink to="/how-it-works" className="rounded-2xl px-3 py-2 text-sm text-muted hover:bg-background hover:text-ink">
             Tutorial
           </NavLink>
@@ -179,6 +231,13 @@ const Nav = () => {
         </div>
       </nav>
     </aside>
+    {showFeatureRequest ? (
+      <FeatureRequestModal
+        canManageLog={featureAccess.canManageLog}
+        onClose={() => setShowFeatureRequest(false)}
+      />
+    ) : null}
+    </>
   );
 };
 

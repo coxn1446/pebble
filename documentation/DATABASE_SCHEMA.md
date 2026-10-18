@@ -242,6 +242,39 @@ For Cloud Run QA/prod, app data lives in schemas `qa` and `prod` on one database
 - **Notes**: Auto-created when DB is healthy (`createTableIfMissing: true`)
 - **Last Modified**: 2026-08-04
 
+### feature_requests
+- **Purpose**: A feature request submitted by an allowed account. The body is a Slate document. Delivery is email; this row is the stored copy.
+- **Columns**:
+  - `feature_request_id` (SERIAL PRIMARY KEY)
+  - `author_id` (INTEGER FK → users, ON DELETE CASCADE)
+  - `body` (JSONB NOT NULL)
+  - `created_at` (TIMESTAMPTZ)
+- **Last Modified**: 2026-10-17
+
+### feature_request_files
+- **Purpose**: Files attached to a feature request. No application size cap.
+- **Columns**:
+  - `feature_request_file_id` (SERIAL PRIMARY KEY)
+  - `feature_request_id` (INTEGER FK → feature_requests, ON DELETE CASCADE)
+  - `file_url` (TEXT NOT NULL)
+  - `file_name` (VARCHAR(512) NOT NULL)
+  - `content_type` (VARCHAR(255))
+  - `storage_key` (TEXT NOT NULL) — object name (`feature-requests/…`) or the local upload name
+  - `created_at` (TIMESTAMPTZ)
+- **Indexes**: `feature_request_files_request_idx` on `feature_request_id`
+- **Last Modified**: 2026-10-17
+
+### feature_request_log
+- **Purpose**: Release log shown in the feature-request dialog. Separate from submitted requests. Status is `not_started`, `wip`, or `completed`.
+- **Columns**:
+  - `feature_request_log_id` (SERIAL PRIMARY KEY)
+  - `description` (TEXT NOT NULL)
+  - `release_date` (DATE)
+  - `status` (VARCHAR(20) NOT NULL, default `not_started`)
+  - `created_by` (INTEGER FK → users, ON DELETE CASCADE)
+  - `created_at` (TIMESTAMPTZ)
+- **Last Modified**: 2026-10-17
+
 ## Views
 
 None yet.
@@ -292,6 +325,9 @@ SQL files live in `server/db/migrations/` (`NNN_description.sql`). Apply with `n
 
 ### `09_user_blurb.sql`
 - Added `users.blurb` (VARCHAR(500))
+
+### `13_feature_requests.sql`
+- Added `feature_requests`, `feature_request_files`, and `feature_request_log`
 
 ### `08_phenomenon_topics.sql`
 - Added `phenomena.offered` and an index for the composer list

@@ -8,9 +8,18 @@ import ContentArea from '../components/Layout/ContentArea';
 import { MOBILE_WELCOME_QUERY } from '../components/Welcome/WelcomeShared';
 import authReducer from '../store/auth.reducer';
 import { createMockUser } from './__mocks__/fetchMocks';
+import { fetchFeatureAccess } from '../helpers/featureRequestHelpers';
 
 jest.mock('../helpers/notificationHelpers', () => ({
   fetchNotifications: jest.fn(async () => ({ notifications: [], unreadCount: 0 })),
+}));
+
+jest.mock('../helpers/featureRequestHelpers', () => ({
+  fetchFeatureAccess: jest.fn(async () => ({ canSubmit: false, canManageLog: false })),
+  fetchFeatureLog: jest.fn(async () => []),
+  uploadFeatureFile: jest.fn(),
+  submitFeatureRequest: jest.fn(),
+  addFeatureLogEntry: jest.fn(),
 }));
 
 jest.mock('../helpers/userHelpers', () => ({
@@ -60,6 +69,7 @@ const renderContentArea = (authState, initialEntries = ['/collections']) => {
 describe('ContentArea', () => {
   beforeEach(() => {
     mockMatchMedia(false);
+    fetchFeatureAccess.mockResolvedValue({ canSubmit: false, canManageLog: false });
   });
 
   test('hides sidebar for unauthenticated users', () => {
@@ -226,5 +236,38 @@ describe('ContentArea', () => {
       expect(screen.getByTestId('content-pane')).toHaveAttribute('data-layout', 'full');
       unmount();
     });
+  });
+
+  test('puts Submit A Feature Request above Tutorial when the account can submit', async () => {
+    const user = userEvent.setup();
+    fetchFeatureAccess.mockResolvedValue({ canSubmit: true, canManageLog: true });
+    renderContentArea({
+      user: createMockUser({ user_id: 18 }),
+      isAuthenticated: true,
+      isLoading: false,
+    });
+
+    const request = await screen.findByRole('button', { name: 'Submit A Feature Request' });
+    const tutorial = screen.getByRole('link', { name: 'Tutorial' });
+    expect(request.compareDocumentPosition(tutorial) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(request);
+    expect(screen.getByTestId('feature-request-modal')).toBeInTheDocument();
+  });
+
+  test('puts Submit A Feature Request in the phone create panel', async () => {
+    const user = userEvent.setup();
+    mockMatchMedia((query) => query === MOBILE_WELCOME_QUERY);
+    fetchFeatureAccess.mockResolvedValue({ canSubmit: true, canManageLog: false });
+    renderContentArea({
+      user: createMockUser({ user_id: 2 }),
+      isAuthenticated: true,
+      isLoading: false,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Submit A Feature Request' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(await screen.findByRole('button', { name: 'Submit A Feature Request' }));
+    expect(screen.getByTestId('feature-request-modal')).toBeInTheDocument();
+    expect(screen.queryByTestId('create-modal')).not.toBeInTheDocument();
   });
 });

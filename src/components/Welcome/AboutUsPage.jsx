@@ -1,12 +1,12 @@
 import React from 'react';
-import aboutAntarctica from '../../resources/about us antartica.png';
-import aboutCanada from '../../resources/about us canada.png';
-import aboutNewYork from '../../resources/about us new york.png';
-import aboutPanama from '../../resources/about us panama.png';
-import aboutItaly from '../../resources/about us dolomites.png';
-import aboutGalapagos from '../../resources/about us galapagos.png';
-import aboutSapa from '../../resources/about us sa pa.png';
-import aboutKyrgyzstan from '../../resources/about us kyrgyzstan.png';
+import aboutAntarctica from '../../resources/about us antartica - climate science.png';
+import aboutCanada from '../../resources/about us canada - chemistry.png';
+import aboutNewYork from '../../resources/about us new york - entomology.png';
+import aboutPanama from '../../resources/about us panama - marine biology.png';
+import aboutItaly from '../../resources/about us dolomites - geology.png';
+import aboutGalapagos from '../../resources/about us galapagos - galapagos.png';
+import aboutSapa from '../../resources/about us sa pa - agricultural science.png';
+import aboutKyrgyzstan from '../../resources/about us kyrgyzstan - physics.png';
 import { CheckIcon } from '../Icons/Icons';
 import {
   WelcomeHeader,
@@ -24,48 +24,56 @@ const ABOUT_JOURNEY = [
     place: 'CANADA',
     src: aboutCanada,
     alt: 'Lichen-covered boulders in Canada',
+    caption: 'Chemistry',
   },
   {
     date: 'AUG 2023',
     place: 'NEW YORK',
     src: aboutNewYork,
     alt: 'A patterned beetle in New York',
+    caption: 'Entomology',
   },
   {
     date: 'FEB 2024',
     place: 'PANAMA',
     src: aboutPanama,
     alt: 'A scuba diver among coral and fish in Panama',
+    caption: 'Marine Biology',
   },
   {
     date: 'JUL 2024',
     place: 'ITALY',
     src: aboutItaly,
     alt: 'Jagged mountain peaks in Italy',
+    caption: 'Geology',
   },
   {
     date: 'AUG 2024',
     place: 'GALAPAGOS ISLANDS',
     src: aboutGalapagos,
     alt: 'Two seabirds facing each other in the Galápagos',
+    caption: 'Galapagos',
   },
   {
     date: 'DEC 2024',
     place: 'ANTARCTICA',
     src: aboutAntarctica,
     alt: 'Gentoo penguins stacking pebbles in Antarctica',
+    caption: 'Climate Science',
   },
   {
     date: 'AUG 2025',
     place: 'SA PA',
     src: aboutSapa,
     alt: 'Terraced rice fields in Sa Pa, Vietnam',
+    caption: 'Agricultural Science',
   },
   {
     date: 'JUL 2026',
     place: 'KYRGYZSTAN',
     src: aboutKyrgyzstan,
     alt: 'Two climbers roped together on a mountain ridge in Kyrgyzstan',
+    caption: 'Physics',
   },
 ];
 
@@ -83,7 +91,17 @@ const DIFFERENT_POINTS = [
   'Pebble responds to your feedback to make the tool more useful!',
 ];
 
-const AboutJourneyItem = ({ date, src, alt, isFirst, isLast, stacked = false }) => {
+const placeLabel = (place) =>
+  place.toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const JourneyCaption = ({ place, caption }) => (
+  <figcaption className="flex h-12 w-full shrink-0 flex-col items-center text-center font-display text-xs leading-tight text-ink">
+    <span>{placeLabel(place)}</span>
+    <span>{caption}</span>
+  </figcaption>
+);
+
+const AboutJourneyItem = ({ date, place, src, alt, caption, isFirst, isLast, stacked = false }) => {
   if (stacked) {
     return (
       <li className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-hidden">
@@ -95,8 +113,11 @@ const AboutJourneyItem = ({ date, src, alt, isFirst, isLast, stacked = false }) 
           <span className="welcome-timeline-pebble mx-1 shrink-0" />
           <span className={`h-px flex-1 ${isLast ? '' : 'bg-border'}`} />
         </span>
-        <figure className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden px-2">
-          <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
+        <figure className="flex min-h-0 w-full flex-1 flex-col items-center overflow-hidden px-2">
+          <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+            <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
+          </div>
+          <JourneyCaption place={place} caption={caption} />
         </figure>
       </li>
     );
@@ -115,8 +136,11 @@ const AboutJourneyItem = ({ date, src, alt, isFirst, isLast, stacked = false }) 
         {isLast ? null : <span className="welcome-timeline-line welcome-timeline-line-down" />}
         <span className="welcome-timeline-pebble relative z-10" />
       </span>
-      <figure className="flex h-16 w-16 shrink-0 items-center justify-center lg:h-full lg:min-h-0 lg:w-44 lg:py-2">
-        <img src={src} alt={alt} className="max-h-full w-auto max-w-full object-contain" />
+      <figure className="flex w-24 shrink-0 flex-col items-center lg:h-full lg:min-h-0 lg:w-44 lg:flex-1 lg:py-1">
+        <div className="flex h-16 w-16 items-center justify-center lg:h-auto lg:min-h-0 lg:w-full lg:flex-1">
+          <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
+        </div>
+        <JourneyCaption place={place} caption={caption} />
       </figure>
     </li>
   );

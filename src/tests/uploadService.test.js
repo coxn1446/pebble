@@ -67,6 +67,26 @@ describe('uploadService media limits', () => {
     expect(fs.writeFileSync).not.toHaveBeenCalled();
   });
 
+  test('stores a feature-request file with no size cap', async () => {
+    const stored = await uploadService.storeUnboundedFile(
+      file({ name: 'brief.pdf', type: 'application/pdf', size: 500 * MB })
+    );
+    expect(stored.file_name).toBe('brief.pdf');
+    expect(stored.storage_key).toMatch(/^feature-requests\//);
+    expect(stored.file_url).toMatch(/^\/uploads\//);
+    expect(fs.writeFileSync).toHaveBeenCalled();
+  });
+
+  test('starts a feature-request upload with no size cap when storage is not configured', async () => {
+    await expect(
+      uploadService.createFeatureUploadSession({
+        filename: 'brief.pdf',
+        contentType: 'application/pdf',
+        size: 800 * MB,
+      })
+    ).resolves.toEqual({ direct: false });
+  });
+
   test('skips direct upload when storage is not configured', async () => {
     await expect(
       uploadService.createUploadSession({
